@@ -12,3 +12,6 @@ git clone https://github.com/sirouk/btt-miner-shield
 cd btt-miner-shield
 pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter python3
 ```
+
+## Watch the output
+`pm2 logs btt-miner-shield-protection`
