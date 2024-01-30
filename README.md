@@ -9,6 +9,7 @@ Before you use this script, please make sure you have you have a rule present fo
 ## Requisites:
 ```bash
 sudo apt update
+sudo apt install jq npm -y
 sudo npm install pm2 -g
 pm2 update
 ```
