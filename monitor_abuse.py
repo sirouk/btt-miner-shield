@@ -24,29 +24,21 @@ def get_latest_commit_hash():
 
 
 def ban_ip_in_ufw(ip):
-    subprocess.run(["sudo", "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"], check=True)
-    subprocess.run(["sudo", "iptables", "-A", "OUTPUT", "-d", ip, "-j", "DROP"], check=True)
-    
-    # cleanup old rules
-    subprocess.run(["sudo", "ufw", "delete", "deny", "from", ip], check=True)
-    subprocess.run(["sudo", "ufw", "delete", "deny", "from", ip, "to", "any"], check=True)
-    subprocess.run(["sudo", "ufw", "delete", "deny", "to", ip], check=True)
-    subprocess.run(["sudo", "ufw", "delete", "deny", "to", ip, "from", "any"], check=True)
-    
-    # add new rules
-    subprocess.run(["sudo", "ufw", "insert", "1", "deny", "from", ip, "to", "any"], check=True)
-    subprocess.run(["sudo", "ufw", "insert", "1", "deny", "to", ip, "from", "any"], check=True)
 
     #dir_path = os.path.dirname(os.path.realpath(__file__))
     #script_path = os.path.join(dir_path, "block_ip.sh")
     #subprocess.run(["sudo", script_path, ip], check=True)
     
     command = f"""
+    sudo ufw insert 1 deny from {ip} to any;
+    sudo ufw insert 2 deny to {ip} from any;
+    sudo iptables -A INPUT -s {ip} -j DROP; 
+    sudo iptables -A OUTPUT -d {ip} -j DROP;
     while sudo netstat -an | grep ESTABLISHED | grep -q {ip}; 
     do 
-        sudo conntrack -D --orig-src {ip};
-        sudo  ss --kill -tn 'dst == {ip}'; 
-        sleep 1;
+        sudo conntrack -D --orig-src {ip}; 
+        sudo ss --kill -tn 'dst == {ip}'; 
+        sleep 1; 
     done
     """
     subprocess.run(command, shell=True, check=True)
