@@ -31,7 +31,7 @@ def ban_ip_in_ufw(ip):
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     script_path = os.path.join(dir_path, "block_ip.sh")
-    subprocess.run([script_path, ip], check=True)
+    subprocess.run(["sudo", script_path, ip], check=True)
     #subprocess.run(command, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
 

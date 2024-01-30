@@ -8,4 +8,4 @@ fi
 
 # Assign the first argument to IP_ADDRESS
 IP_ADDRESS="$1"
-while sudo netstat -an | grep ESTABLISHED | grep "$IP_ADDRESS"; do iptables -A INPUT -s $IP_ADDRESS -j DROP; conntrack -D --orig-src $IP_ADDRESS; ss --kill -tn "dst == $IP_ADDRESS"; done
+while sudo netstat -an | grep ESTABLISHED | grep "$IP_ADDRESS"; do sudo iptables -A INPUT -s $IP_ADDRESS -j DROP; sudo conntrack -D --orig-src $IP_ADDRESS; sudo ss --kill -tn "dst == $IP_ADDRESS"; done
