@@ -6,6 +6,14 @@ This script auto-updates by default. If you prefer not then just modify the moni
 ## CAUTION:
 Before you use this script, please make sure you have you have a rule present for SSH to remotely manage your machine, preferably only to your IP(s)!
 
+## Requisites:
+```bash
+sudo apt update
+sudo npm install pm2 -g
+pm2 update
+```
+
+## Installation:
 ```bash
 cd ~
 git clone https://github.com/sirouk/btt-miner-shield
