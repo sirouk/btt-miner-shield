@@ -25,9 +25,6 @@ def get_latest_commit_hash():
 
 def ban_ip_in_ufw(ip):
 
-    #dir_path = os.path.dirname(os.path.realpath(__file__))
-    #script_path = os.path.join(dir_path, "block_ip.sh")
-    #subprocess.run(["sudo", script_path, ip], check=True)
     print(f"Blocking {ip}...")
     
     # Using a more precise pattern for matching the exact IP address
@@ -48,7 +45,6 @@ def ban_ip_in_ufw(ip):
     done
     """
     subprocess.run(command, shell=True, check=True)
-    #subprocess.run(command, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
 
 def get_established_connections():
