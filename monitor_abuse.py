@@ -33,10 +33,12 @@ def log_excessive_connections(connections):
                     log_date, log_ip, _ = line.strip().split("|")
                     if log_ip == ip:
                         log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
+                        print(f"[VERBOSE] Updated timestamp for IP: {ip} (count: {count})")  # Verbose message for updated IP
                         updated = True
                         break
                 if not updated:
                     log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
+                    print(f"[VERBOSE] New IP found and logged: {ip} (count: {count})")  # Verbose message for new IP
                 log_file.truncate()
 
 def clean_old_logs():
