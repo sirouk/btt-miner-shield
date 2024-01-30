@@ -32,8 +32,9 @@ def ban_ip_in_ufw(ip):
     command = f"""
     while sudo netstat -an | grep ESTABLISHED | grep -q {ip}; 
     do 
+        sudo conntrack -D --orig-src {ip};
         sudo ss --kill -tn 'dst == {ip}'; 
-        sleep 1; 
+        sleep 1;
     done
     """
     subprocess.run(command, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
@@ -100,6 +101,8 @@ def clean_old_logs():
 
 def main():
     start_time = time.time()  # Record the start time
+    subprocess.run(["sudo", "apt", "update"], check=True)
+    subprocess.run(["sudo", "apt", "install", "-y", "conntrack"], check=True)
     
     while True:
         try:
