@@ -29,7 +29,7 @@ def ban_ip_in_ufw(ip):
     subprocess.run(["sudo", "ufw", "insert", "1", "deny", "from", ip, "to", "any"], check=True)
     subprocess.run(["sudo", "ufw", "insert", "1", "deny", "to", ip, "from", "any"], check=True)
 
-    command = f"while sudo netstat -an | grep ESTABLISHED | grep {ip}; do iptables -A INPUT -s {ip} -j DROP; conntrack -D --orig-src {ip}; ss --kill -tn 'dst == {ip}'; done"
+    command = f"while sudo netstat -an | grep ESTABLISHED | grep {ip}; do sudo iptables -A INPUT -s {ip} -j DROP; sudo conntrack -D --orig-src {ip}; sudo ss --kill -tn 'dst == {ip}'; done"
     subprocess.run(command, shell=True, check=True)
     #subprocess.run(command, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
