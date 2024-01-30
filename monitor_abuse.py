@@ -9,9 +9,15 @@ import time
 log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
 # Duration to keep logs (ban duration + 7 days)
 log_retention_duration = 14  # Adjust as needed
-ban_threshold = 15
-sleep_between_checks = 15
+ban_threshold = 10
+sleep_between_checks = 10
+update_interval = 300  # Time in seconds to wait for git pull (5 minutes)
 
+
+def get_latest_commit_hash():
+    """Function to get the latest commit hash."""
+    result = subprocess.run(["git", "log", "-1", "--format=%H"], capture_output=True, text=True)
+    return result.stdout.strip()
 
 
 def ban_ip_in_ufw(ip):
@@ -35,6 +41,7 @@ def get_established_connections():
     cmd = "netstat -an | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1 | sort | uniq -c"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return result.stdout
+
 
 def log_excessive_connections(connections):
     seen_ips = set()  # Track seen IPs to avoid duplicates
@@ -95,6 +102,7 @@ def log_excessive_connections_old(connections):
                     log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
                     print(f"[VERBOSE] New IP found and logged: {ip} (count: {count})")  # Verbose message for new IP
 
+
 def clean_old_logs():
     with open(log_path, 'r+') as file:
         lines = file.readlines()
@@ -105,7 +113,10 @@ def clean_old_logs():
                 file.write(line)
         file.truncate()
 
+
 def main():
+    start_time = time.time()  # Record the start time
+    
     while True:
         try:
 
@@ -118,10 +129,32 @@ def main():
             subprocess.run(["sudo", "ufw", "reload"], check=True)
             clean_old_logs()
 
+            # Check if 5 minutes have passed
+            if time.time() - start_time >= update_interval:
+                os.chdir(os.path.dirname(__file__))
+                # Get the latest commit hash before git pull
+                commit_before_pull = get_latest_commit_hash()
+
+                # Perform git pull
+                subprocess.run(["git", "pull"], check=True)
+
+                # Get the latest commit hash after git pull
+                commit_after_pull = get_latest_commit_hash()
+
+                # Compare commit hashes and decide to continue or exit
+                if commit_before_pull != commit_after_pull:
+                    print("Updates pulled, exiting...")
+                    break
+                else:
+                    print("No updates found, continuing...")
+                    # Reset the timer
+                    start_time = time.time()
+
         except Exception as e:
             print(f"Error occurred: {e}")
 
         time.sleep(sleep_between_checks)  # Check every 60 seconds (adjust as needed)
+
 
 if __name__ == "__main__":
     main()
