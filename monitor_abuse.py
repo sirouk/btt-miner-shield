@@ -34,12 +34,12 @@ def ban_ip_in_ufw(ip):
     #subprocess.run(["sudo", script_path, ip], check=True)
     
     command = f"""
-    while sudo netstat -an | grep ESTABLISHED | grep {ip}; 
+    while netstat -an | grep ESTABLISHED | grep {ip}; 
     do 
-        sudo iptables -A INPUT -s {ip} -j DROP;
-        sudo iptables -A OUTPUT -d {ip} -j DROP;
-        sudo conntrack -D --orig-src {ip};
-        sudo ss --kill -tn 'dst == {ip}'; 
+        iptables -A INPUT -s {ip} -j DROP;
+        iptables -A OUTPUT -d {ip} -j DROP;
+        conntrack -D --orig-src {ip};
+        ss --kill -tn 'dst == {ip}'; 
         sleep 1;
     done
     """
