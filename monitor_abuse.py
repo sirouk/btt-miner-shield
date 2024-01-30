@@ -29,9 +29,21 @@ def ban_ip_in_ufw(ip):
     subprocess.run(["sudo", "ufw", "insert", "1", "deny", "from", ip, "to", "any"], check=True)
     subprocess.run(["sudo", "ufw", "insert", "1", "deny", "to", ip, "from", "any"], check=True)
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    script_path = os.path.join(dir_path, "block_ip.sh")
-    subprocess.run(["sudo", script_path, ip], check=True)
+    #dir_path = os.path.dirname(os.path.realpath(__file__))
+    #script_path = os.path.join(dir_path, "block_ip.sh")
+    #subprocess.run(["sudo", script_path, ip], check=True)
+    
+    command = f"""
+    while sudo netstat -an | grep ESTABLISHED | grep {ip}; 
+    do 
+        sudo iptables -A INPUT -s {ip} -j DROP;
+        sudo iptables -A OUTPUT -d {ip} -j DROP;
+        sudo conntrack -D --orig-src {ip};
+        sudo ss --kill -tn 'dst == {ip}'; 
+        sleep 1;
+    done
+    """
+    subprocess.run(command, shell=True, check=True)
     #subprocess.run(command, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
 
@@ -98,6 +110,8 @@ def main():
     start_time = time.time()  # Record the start time
     subprocess.run(["sudo", "apt", "update"], check=True)
     subprocess.run(["sudo", "apt", "install", "-y", "conntrack"], check=True)
+    subprocess.run(["sudo", "ufw", "enable"], check=True)
+    subprocess.run(["sudo", "ufw", "reload"], check=True)
     
     while True:
         try:
