@@ -88,7 +88,7 @@ def log_excessive_connections(connections):
                     print(f"[VERBOSE] New IP found and logged: {ip} (count: {count})")
 
     if file_updated:
-        subprocess.run(["sudo", "ufw", "enable"], check=True)
+        subprocess.run(["sudo", "ufw", "enable", "-y"], check=True)
         subprocess.run(["sudo", "ufw", "reload"], check=True)
         # Rewrite the log file if any updates were made
         with open(log_path, 'w') as log_file:
@@ -110,7 +110,7 @@ def main():
     start_time = time.time()  # Record the start time
     subprocess.run(["sudo", "apt", "update"], check=True)
     subprocess.run(["sudo", "apt", "install", "-y", "conntrack"], check=True)
-    subprocess.run(["sudo", "ufw", "enable"], check=True)
+    subprocess.run(["sudo", "ufw", "enable", "-y"], check=True)
     subprocess.run(["sudo", "ufw", "reload"], check=True)
     
     while True:
