@@ -7,8 +7,8 @@ import time
 
 
 # Adjust as needed
-log_retention_duration = 14  # Duration to keep logs (ban duration + 7 days)
-ban_threshold = 10 # Maximum Concurrent connections, otherwise ban!
+log_retention_duration = 30  # Duration to keep logs (ban duration + 7 days)
+ban_threshold = 7 # Maximum Concurrent connections, otherwise ban!
 sleep_between_checks = 10 # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
@@ -53,19 +53,19 @@ def ban_ip_in_ufw(ip):
 
 def get_established_connections():
     # Run the netstat command and capture its output
-    cmd = "netstat -an | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1 | sort | uniq -c"
+    cmd = "sudo netstat -an | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1 | sort | uniq -c"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return result.stdout
 
 
-def log_excessive_connections(connections):
+def handle_excessive_connections(connections):
     seen_ips = set()  # Track seen IPs to avoid duplicates
     file_updated = False
     log_entries = []
 
     for connection in connections.splitlines():
         count, ip = connection.strip().split(None, 1)
-        if int(count) >= ban_threshold and ip not in seen_ips:
+        if int(count) > ban_threshold and ip not in seen_ips:
             ban_ip_in_ufw(ip)
             seen_ips.add(ip)
             file_updated = True
@@ -127,7 +127,7 @@ def main():
                 open(log_path, 'a').close()  # Create an empty file
 
             connections = get_established_connections()
-            log_excessive_connections(connections)
+            handle_excessive_connections(connections)
             print("btt-miner-shield heartbeat")
             clean_old_logs()
 
