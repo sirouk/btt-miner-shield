@@ -26,6 +26,14 @@ def get_latest_commit_hash():
 def ban_ip_in_ufw(ip):
     subprocess.run(["sudo", "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"], check=True)
     subprocess.run(["sudo", "iptables", "-A", "OUTPUT", "-d", ip, "-j", "DROP"], check=True)
+    
+    # cleanup old rules
+    subprocess.run(["sudo", "ufw", "delete", "deny", "from", ip], check=True)
+    subprocess.run(["sudo", "ufw", "delete", "deny", "from", ip, "to", "any"], check=True)
+    subprocess.run(["sudo", "ufw", "delete", "deny", "to", ip], check=True)
+    subprocess.run(["sudo", "ufw", "delete", "deny", "to", ip, "from", "any"], check=True)
+    
+    # add new rules
     subprocess.run(["sudo", "ufw", "insert", "1", "deny", "from", ip, "to", "any"], check=True)
     subprocess.run(["sudo", "ufw", "insert", "1", "deny", "to", ip, "from", "any"], check=True)
 
@@ -34,12 +42,10 @@ def ban_ip_in_ufw(ip):
     #subprocess.run(["sudo", script_path, ip], check=True)
     
     command = f"""
-    while netstat -an | grep ESTABLISHED | grep {ip}; 
+    while sudo netstat -an | grep ESTABLISHED | grep -q {ip}; 
     do 
-        iptables -A INPUT -s {ip} -j DROP;
-        iptables -A OUTPUT -d {ip} -j DROP;
-        conntrack -D --orig-src {ip};
-        ss --kill -tn 'dst == {ip}'; 
+        sudo conntrack -D --orig-src {ip};
+        sudo  ss --kill -tn 'dst == {ip}'; 
         sleep 1;
     done
     """
@@ -107,6 +113,9 @@ def clean_old_logs():
 
 
 def main():
+    if not os.geteuid() == 0:
+        sys.exit("\nOnly root can run this script\n")
+        
     start_time = time.time()  # Record the start time
     subprocess.run(["sudo", "apt", "update"], check=True)
     subprocess.run(["sudo", "apt", "install", "-y", "conntrack"], check=True)
