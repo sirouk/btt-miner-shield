@@ -1,3 +1,5 @@
+import requests
+import netifaces
 import subprocess
 import datetime
 import os
@@ -8,10 +10,28 @@ log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
 # Duration to keep logs (ban duration + 7 days)
 log_retention_duration = 14  # Adjust as needed
 ban_threshold = 20
-sleep_between_checks = 15
+sleep_between_checks = 5
+
+
+def get_public_ip():
+    response = requests.get('https://ipinfo.io/ip')
+    return response.text.strip()
+
+def get_outgoing_interface():
+    gws = netifaces.gateways()
+    return gws['default'][netifaces.AF_INET][1]
+
+public_ip = get_public_ip()
+interface = get_outgoing_interface()
+
 
 def ban_ip_in_ufw(ip):
-    subprocess.run(["iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"], check=True)
+    subprocess.Popen(["sudo", "tcpkill", "-i", interface, "host", ip])
+
+    subprocess.run(["sudo", "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"], check=True)
+    subprocess.run(["sudo", "iptables", "-A", "OUTPUT", "-d", ip, "-j", "DROP"], check=True)
+    subprocess.run(["sudo", "ufw", "deny", "from", ip], check=True)
+    subprocess.run(["sudo", "ufw", "deny", "to", ip], check=True)
 
 def get_established_connections():
     # Run the netstat command and capture its output
@@ -21,15 +41,53 @@ def get_established_connections():
 
 def log_excessive_connections(connections):
     seen_ips = set()  # Track seen IPs to avoid duplicates
+    file_updated = False
+    log_entries = []
+
     for connection in connections.splitlines():
         count, ip = connection.strip().split(None, 1)
         if int(count) > ban_threshold and ip not in seen_ips:
+            ban_ip_in_ufw(ip)
             seen_ips.add(ip)
-            with open(log_path, 'r+') as log_file:
-                lines = log_file.readlines()
-                log_file.seek(0)
+            file_updated = True
+            with open(log_path, 'r') as log_file:
+                log_entries = log_file.readlines()
+
+            with open(log_path, 'w') as log_file:
                 updated = False
-                for line in lines:
+                for line in log_entries:
+                    parts = line.strip().split("|")
+                    if len(parts) == 3:
+                        log_date, log_ip, _ = parts
+                        if log_ip == ip:
+                            log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
+                            print(f"[VERBOSE] Updated timestamp for IP: {ip} (count: {count})")
+                            updated = True
+                        else:
+                            log_file.write(line)
+                    else:
+                        log_file.write(line)
+
+                if not updated:
+                    log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
+                    print(f"[VERBOSE] New IP found and logged: {ip} (count: {count})")
+
+    if file_updated:
+        # Rewrite the log file if any updates were made
+        with open(log_path, 'w') as log_file:
+            log_file.writelines(log_entries)
+
+
+def log_excessive_connections_old(connections):
+    seen_ips = set()  # Track seen IPs to avoid duplicates
+    for connection in connections.splitlines():
+        count, ip = connection.strip().split(None, 1)
+        if int(count) > ban_threshold and ip not in seen_ips:
+            ban_ip_in_ufw(ip)
+            seen_ips.add(ip)
+            with open(log_path, 'r+') as log_file:  # Open the file in append mode 'a'
+                updated = False
+                for line in log_file:
                     log_date, log_ip, _ = line.strip().split("|")
                     if log_ip == ip:
                         log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
@@ -39,7 +97,6 @@ def log_excessive_connections(connections):
                 if not updated:
                     log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
                     print(f"[VERBOSE] New IP found and logged: {ip} (count: {count})")  # Verbose message for new IP
-                log_file.truncate()
 
 def clean_old_logs():
     with open(log_path, 'r+') as file:
@@ -61,12 +118,9 @@ def main():
 
             connections = get_established_connections()
             log_excessive_connections(connections)
+            subprocess.run(["sudo", "ufw", "reload"], check=True)
             clean_old_logs()
 
-            with open(log_path, 'r') as log_file:
-                for line in log_file:
-                    _, ip, _ = line.strip().split("|")
-                    ban_ip_in_ufw(ip)
         except Exception as e:
             print(f"Error occurred: {e}")
 
