@@ -80,30 +80,11 @@ def log_excessive_connections(connections):
                     print(f"[VERBOSE] New IP found and logged: {ip} (count: {count})")
 
     if file_updated:
+        subprocess.run(["sudo", "ufw", "enable"], check=True)
+        subprocess.run(["sudo", "ufw", "reload"], check=True)
         # Rewrite the log file if any updates were made
         with open(log_path, 'w') as log_file:
             log_file.writelines(log_entries)
-
-
-def log_excessive_connections_old(connections):
-    seen_ips = set()  # Track seen IPs to avoid duplicates
-    for connection in connections.splitlines():
-        count, ip = connection.strip().split(None, 1)
-        if int(count) > ban_threshold and ip not in seen_ips:
-            ban_ip_in_ufw(ip)
-            seen_ips.add(ip)
-            with open(log_path, 'r+') as log_file:  # Open the file in append mode 'a'
-                updated = False
-                for line in log_file:
-                    log_date, log_ip, _ = line.strip().split("|")
-                    if log_ip == ip:
-                        log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
-                        print(f"[VERBOSE] Updated timestamp for IP: {ip} (count: {count})")  # Verbose message for updated IP
-                        updated = True
-                        break
-                if not updated:
-                    log_file.write(f"{datetime.datetime.now()}|{ip}|{count}\n")
-                    print(f"[VERBOSE] New IP found and logged: {ip} (count: {count})")  # Verbose message for new IP
 
 
 def clean_old_logs():
@@ -128,8 +109,7 @@ def main():
 
             connections = get_established_connections()
             log_excessive_connections(connections)
-            subprocess.run(["sudo", "ufw", "enable"], check=True)
-            subprocess.run(["sudo", "ufw", "reload"], check=True)
+            print("heartbeat")
             clean_old_logs()
 
             # Check if 5 minutes have passed
