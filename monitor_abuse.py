@@ -30,12 +30,17 @@ def ban_ip_in_ufw(ip):
     #subprocess.run(["sudo", script_path, ip], check=True)
     print(f"Blocking {ip}...")
     
+    # Using a more precise pattern for matching the exact IP address
+    ip_pattern = f" {ip}( |:|$)"
+
     command = f"""
+    sudo ufw delete deny from {ip};
+    sudo ufw delete deny to {ip};
     sudo ufw insert 1 deny from {ip} to any;
     sudo ufw insert 2 deny to {ip} from any;
     sudo iptables -A INPUT -s {ip} -j DROP; 
     sudo iptables -A OUTPUT -d {ip} -j DROP;
-    while sudo netstat -an | grep ESTABLISHED | grep -q {ip}; 
+    while sudo netstat -an | grep ESTABLISHED | grep -Eq '{ip_pattern}'; 
     do 
         sudo conntrack -D --orig-src {ip}; 
         sudo ss --kill -tn 'dst == {ip}'; 
