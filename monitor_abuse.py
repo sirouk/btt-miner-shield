@@ -26,12 +26,22 @@ interface = get_outgoing_interface()
 
 
 def ban_ip_in_ufw(ip):
-    subprocess.Popen(["sudo", "tcpkill", "-i", interface, "host", ip])
-
     subprocess.run(["sudo", "iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"], check=True)
     subprocess.run(["sudo", "iptables", "-A", "OUTPUT", "-d", ip, "-j", "DROP"], check=True)
-    subprocess.run(["sudo", "ufw", "deny", "from", ip], check=True)
-    subprocess.run(["sudo", "ufw", "deny", "to", ip], check=True)
+    subprocess.run(["sudo", "ufw", "insert", "1", "deny", "from", ip, "to", "any"], check=True)
+    subprocess.run(["sudo", "ufw", "insert", "1", "deny", "to", ip, "from", "any"], check=True)
+
+    command = f"""
+    iptables -A INPUT -s {ip_address} -j DROP; 
+    while netstat -an | grep ESTABLISHED | grep -q {ip_address}; 
+    do 
+        conntrack -D --orig-src {ip_address}; 
+        ss --kill -tn 'dst == {ip}'; 
+        sleep 1; 
+    done
+    """
+    subprocess.run(command, shell=True, check=True)
+
 
 def get_established_connections():
     # Run the netstat command and capture its output
