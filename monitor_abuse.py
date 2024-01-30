@@ -32,6 +32,7 @@ def ban_ip_in_ufw(ip):
     command = f"""
     while sudo netstat -an | grep ESTABLISHED | grep -q {ip}; 
     do 
+        iptables -A INPUT -s 117.250.3.58 -j DROP;
         sudo conntrack -D --orig-src {ip};
         sudo ss --kill -tn 'dst == {ip}'; 
         sleep 1;
