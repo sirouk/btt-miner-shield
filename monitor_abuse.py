@@ -5,14 +5,17 @@ import datetime
 import os
 import time
 
+
+# Adjust as needed
+log_retention_duration = 14  # Duration to keep logs (ban duration + 7 days)
+ban_threshold = 10 # Maximum Concurrent connections, otherwise ban!
+sleep_between_checks = 10 # Time in seconds between connection monitoring
+update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
+auto_update_enabled = True
+
+
 # Path for the log file
 log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
-# Duration to keep logs (ban duration + 7 days)
-log_retention_duration = 14  # Adjust as needed
-ban_threshold = 10
-sleep_between_checks = 10
-update_interval = 300  # Time in seconds to wait for git pull (5 minutes)
-
 
 def get_latest_commit_hash():
     """Function to get the latest commit hash."""
@@ -50,7 +53,7 @@ def log_excessive_connections(connections):
 
     for connection in connections.splitlines():
         count, ip = connection.strip().split(None, 1)
-        if int(count) > ban_threshold and ip not in seen_ips:
+        if int(count) >= ban_threshold and ip not in seen_ips:
             ban_ip_in_ufw(ip)
             seen_ips.add(ip)
             file_updated = True
@@ -119,7 +122,6 @@ def main():
     
     while True:
         try:
-
             # Create the log file if it doesn't exist
             if not os.path.exists(log_path):
                 open(log_path, 'a').close()  # Create an empty file
@@ -131,18 +133,14 @@ def main():
             clean_old_logs()
 
             # Check if 5 minutes have passed
-            if time.time() - start_time >= update_interval:
+            if auto_update_enabled and time.time() - start_time >= update_interval:
                 os.chdir(os.path.dirname(__file__))
-                # Get the latest commit hash before git pull
+                
+                # Compare git hashes to determine if there was an update
                 commit_before_pull = get_latest_commit_hash()
-
-                # Perform git pull
                 subprocess.run(["git", "pull"], check=True)
-
-                # Get the latest commit hash after git pull
                 commit_after_pull = get_latest_commit_hash()
-
-                # Compare commit hashes and decide to continue or exit
+                
                 if commit_before_pull != commit_after_pull:
                     print("Updates pulled, exiting...")
                     break
@@ -150,7 +148,7 @@ def main():
                     print("No updates found, continuing...")
                     # Reset the timer
                     start_time = time.time()
-
+                
         except Exception as e:
             print(f"Error occurred: {e}")
 
