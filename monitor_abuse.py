@@ -9,20 +9,9 @@ import time
 log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
 # Duration to keep logs (ban duration + 7 days)
 log_retention_duration = 14  # Adjust as needed
-ban_threshold = 20
-sleep_between_checks = 5
+ban_threshold = 15
+sleep_between_checks = 15
 
-
-def get_public_ip():
-    response = requests.get('https://ipinfo.io/ip')
-    return response.text.strip()
-
-def get_outgoing_interface():
-    gws = netifaces.gateways()
-    return gws['default'][netifaces.AF_INET][1]
-
-public_ip = get_public_ip()
-interface = get_outgoing_interface()
 
 
 def ban_ip_in_ufw(ip):
