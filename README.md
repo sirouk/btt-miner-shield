@@ -24,3 +24,6 @@ pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter pyth
 
 ## Watch the output
 `pm2 logs btt-miner-shield-protection`
+
+## Force update
+`cd ~/btt-miner-shield && git pull && pm2 restart btt-miner-shield-protection && pm2 logs btt-miner-shield-protection`
