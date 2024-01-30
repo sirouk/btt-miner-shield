@@ -28,7 +28,7 @@ def ban_ip_in_ufw(ip):
         sleep 1; 
     done
     """
-    subprocess.run(command, shell=True, check=True)
+    subprocess.run(command, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
 
 def get_established_connections():
