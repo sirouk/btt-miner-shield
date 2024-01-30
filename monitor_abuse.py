@@ -126,6 +126,7 @@ def main():
 
             connections = get_established_connections()
             log_excessive_connections(connections)
+            subprocess.run(["sudo", "ufw", "enable"], check=True)
             subprocess.run(["sudo", "ufw", "reload"], check=True)
             clean_old_logs()
 
