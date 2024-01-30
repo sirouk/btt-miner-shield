@@ -48,10 +48,24 @@ def ban_ip_in_ufw(ip):
 
 
 def get_established_connections():
+    # Regular expression to match only valid IPv4 addresses
+    ipv4_regex = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
+
     # Run the netstat command and capture its output
-    cmd = "sudo netstat -an | grep ESTABLISHED | awk '{print $5}' | cut -d: -f1 | sort | uniq -c"
+    cmd = "sudo netstat -an | grep ESTABLISHED | awk '{print $5}'"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    return result.stdout
+
+    # Filter and count valid IPv4 addresses
+    ip_counts = {}
+    for line in result.stdout.splitlines():
+        match = re.search(ipv4_regex, line)
+        if match:
+            ip = match.group()
+            ip_counts[ip] = ip_counts.get(ip, 0) + 1
+
+    # Format the result
+    formatted_result = "\n".join(f"{count} {ip}" for ip, count in ip_counts.items())
+    return formatted_result
 
 
 def handle_excessive_connections(connections):
