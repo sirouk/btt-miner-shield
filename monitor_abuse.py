@@ -109,7 +109,7 @@ def main():
 
             connections = get_established_connections()
             log_excessive_connections(connections)
-            print("heartbeat")
+            print("btt-miner-shield 'heartbeat'")
             clean_old_logs()
 
             # Check if 5 minutes have passed
