@@ -28,7 +28,7 @@ def ban_ip_in_ufw(ip):
     #dir_path = os.path.dirname(os.path.realpath(__file__))
     #script_path = os.path.join(dir_path, "block_ip.sh")
     #subprocess.run(["sudo", script_path, ip], check=True)
-    print("Blocking {ip}...")
+    print(f"Blocking {ip}...")
     
     command = f"""
     sudo ufw insert 1 deny from {ip} to any;
