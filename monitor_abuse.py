@@ -120,6 +120,9 @@ def main():
                 commit_before_pull = get_latest_commit_hash()
                 subprocess.run(["git", "pull"], check=True)
                 commit_after_pull = get_latest_commit_hash()
+
+                subprocess.run(["sudo", "ufw", "enable"], check=True)
+                subprocess.run(["sudo", "ufw", "reload"], check=True)
                 
                 if commit_before_pull != commit_after_pull:
                     print("Updates pulled, exiting...")
