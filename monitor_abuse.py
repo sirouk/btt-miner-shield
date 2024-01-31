@@ -5,6 +5,7 @@ import datetime
 import os
 import time
 import re
+import sys  # Added to support sys.exit in main()
 
 
 # Adjust as needed
@@ -12,7 +13,7 @@ log_retention_duration = 30  # Duration to keep logs (ban duration + 7 days)
 ban_threshold = 7 # Maximum Concurrent connections, otherwise ban!
 sleep_between_checks = 7 # Time in seconds between connection monitoring
 update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
-auto_update_enabled = True
+auto_update_enabled = False
 
 
 # Path for the log file
@@ -48,6 +49,23 @@ def ban_ip_in_ufw(ip):
 
 
 def get_established_connections():
+    ipv4_regex = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
+    # Filter ports greater than or equal to 1000
+    cmd = "sudo netstat -an | grep ESTABLISHED | awk '{print $5}' | grep -v ':22$'"
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    ip_counts = {}
+    for line in result.stdout.splitlines():
+        port = int(line.split(':')[-1])
+        if port >= 1000:  # Check for ports >= 1000
+            match = re.search(ipv4_regex, line)
+            if match:
+                ip = match.group()
+                ip_counts[ip] = ip_counts.get(ip, 0) + 1
+    formatted_result = "\n".join(f"{count} {ip}" for ip, count in ip_counts.items())
+    return formatted_result
+
+
+def get_established_connections_old():
     # Regular expression to match only valid IPv4 addresses
     ipv4_regex = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
 
@@ -68,6 +86,31 @@ def get_established_connections():
     return formatted_result
 
 
+def get_max_connection_duration(ip):
+    # Use lsof to get the PID of connections to the IP, then ps to get the duration
+    cmd = f"lsof -t -i @{ip} | xargs -I {{}} ps --no-headers -o 'pid,etime' -p {{}} | sort -k2,2r | head -n1"
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    if result.stdout:
+        pid, duration = result.stdout.strip().split(maxsplit=1)
+        # Convert duration to total seconds
+        h, m, s = 0, 0, 0
+        if '-' in duration:  # Days are present
+            days, time = duration.split('-')
+            h, m, s = map(int, time.split(':'))
+            total_seconds = int(days) * 86400 + h * 3600 + m * 60 + s
+        elif ':' in duration:
+            parts = duration.split(':')
+            if len(parts) == 3:
+                h, m, s = map(int, parts)
+            else:
+                m, s = map(int, parts)
+            total_seconds = h * 3600 + m * 60 + s
+        else:
+            total_seconds = int(duration)
+        return total_seconds
+    return 0
+
+
 def handle_excessive_connections(connections):
     seen_ips = set()  # Track seen IPs to avoid duplicates
     file_updated = False
@@ -75,7 +118,8 @@ def handle_excessive_connections(connections):
 
     for connection in connections.splitlines():
         count, ip = connection.strip().split(None, 1)
-        if int(count) > ban_threshold and ip not in seen_ips:
+        max_connection_duration = get_max_connection_duration(ip)
+        if (int(count) > ban_threshold or max_connection_duration > 60) and ip not in seen_ips:
             ban_ip_in_ufw(ip)
             seen_ips.add(ip)
             file_updated = True
