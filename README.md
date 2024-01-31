@@ -22,6 +22,20 @@ cd btt-miner-shield
 pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter python3
 ```
 
+## Configuration:
+
+`nano ~/btt-miner-shield/monitor_abuse.py`
+
+```bash
+# Adjust as needed
+log_retention_duration = 30  # Duration to keep logs (ban duration + 7 days)
+ban_threshold = 7 # Maximum Concurrent connections, otherwise ban!
+sleep_between_checks = 7 # Time in seconds between connection monitoring
+update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
+auto_update_enabled = True
+```
+
+
 ## Watch the output
 `pm2 logs btt-miner-shield-protection`
 
