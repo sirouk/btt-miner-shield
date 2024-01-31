@@ -41,8 +41,7 @@ def ban_ip_in_ufw(ip):
     while sudo netstat -an | grep ESTABLISHED | grep -Eq '{ip_pattern}'; 
     do 
         sudo conntrack -D --orig-src {ip}; 
-        sudo ss --kill -tn 'dst == {ip}'; 
-        sleep 1; 
+        sudo ss --kill -tn 'dst == {ip}';
     done
     """
     subprocess.run(command, shell=True, check=True)
