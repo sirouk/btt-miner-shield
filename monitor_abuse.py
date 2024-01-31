@@ -11,7 +11,7 @@ import re
 log_retention_duration = 30  # Duration to keep logs (ban duration + 7 days)
 ban_threshold = 7 # Maximum Concurrent connections, otherwise ban!
 sleep_between_checks = 7 # Time in seconds between connection monitoring
-update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
+update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
 auto_update_enabled = True
 
 
