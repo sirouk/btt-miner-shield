@@ -24,6 +24,7 @@ connection_threshold = 120  # Maximum oldest connection time in seconds
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
 auto_update_enabled = True
+flush_logs = True # Cleanup to see if this helps with memory
 
 # Path for the log file
 log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
@@ -236,59 +237,23 @@ def get_max_connection_duration(ip):
 
 def handle_excessive_connections(connections):
     seen_ips = set()
+    
     file_updated = False
-    log_entries = []
-
     for connection in connections.splitlines():
         count, ip = connection.strip().split(None, 1)
-        max_connection_duration = get_max_connection_duration(ip)
+        #max_connection_duration = get_max_connection_duration(ip)
+        max_connection_duration = 0
         #if (int(count) > ban_threshold or max_connection_duration > connection_threshold) and ip not in seen_ips:
         if int(count) > ban_threshold and ip not in seen_ips:
             ban_ip_in_ufw(ip)  # Uncomment if you want to enable IP banning again
             seen_ips.add(ip)
             file_updated = True
             print(f"[INFO] IP: {ip}, Count: {count}, Duration: {max_connection_duration}s")
-            log_found = False
 
-            with open(log_path, 'r+') as log_file:
-                log_entries = log_file.readlines()
-                log_file.seek(0)
-
-                for line in log_entries:
-                    parts = line.strip().split("|")
-                    if len(parts) >= 3 and parts[1] == ip:
-                        # Update the existing log entry with new count and max connection duration
-                        log_file.write(f"{datetime.datetime.now()}|{ip}|{count}|{max_connection_duration}\n")
-                        log_found = True
-                    else:
-                        log_file.write(line + "\n")
-
-                if not log_found:
-                    # Add a new log entry
-                    log_file.write(f"{datetime.datetime.now()}|{ip}|{count}|{max_connection_duration}\n")
-
-                log_file.truncate()  # Truncate the file to the current position
 
     if file_updated:
         subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
         subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
-
-def clean_old_logs():
-    with open(log_path, 'r+') as file:
-        lines = file.readlines()
-        file.seek(0)
-        for line in lines:
-            # Skip empty lines or lines not starting with a date
-            if line.strip() == '' or not line[0].isdigit():
-                continue
-            try:
-                log_date = datetime.datetime.strptime(line.split('|')[0], "%Y-%m-%d %H:%M:%S.%f")
-                if (datetime.datetime.now() - log_date).days <= log_retention_duration:
-                    file.write(line)
-            except ValueError as e:
-                print(f"Error parsing line: {line}. Error: {e}")
-                # Optionally handle or log the error further here
-        file.truncate()
 
 
 def main():
@@ -319,15 +284,18 @@ def main():
     # Commands for system setup commented out for brevity
     while True:
         try:
+            # Check if the log file exists, create if not, and flush its contents
             if not os.path.exists(log_path):
-                open(log_path, 'a').close()
+                open(log_path, 'a').close()  # Create the file if it does not exist
+            else:
+                if flush_logs:
+                    open(log_path, 'w').close()  # Flush the contents if the file exists
 
             axon_ports = get_axon_ports()
             connections = get_established_connections(axon_ports)
             handle_excessive_connections(connections)
             report_banned_ips(webhook_url)
             print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
-            clean_old_logs()
 
             if auto_update_enabled and time.time() - start_time >= update_interval:
                 os.chdir(os.path.dirname(__file__))
