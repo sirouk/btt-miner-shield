@@ -182,6 +182,7 @@ def ban_ip_in_ufw(ip):
     do
         sudo conntrack -D --orig-src {ip};
         sudo ss --kill -tn 'dst == {ip}';
+        sleep 0.25;
     done
     """
     subprocess.run(command, shell=True, check=True)
