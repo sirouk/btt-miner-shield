@@ -18,16 +18,12 @@ import socket
 banned_ips = []
 
 # Adjust as needed
-log_retention_duration = 30  # Duration to keep logs (ban duration + 7 days)
 ban_threshold = 2  # Maximum Concurrent connections, otherwise ban!
 connection_threshold = 120  # Maximum oldest connection time in seconds
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
 auto_update_enabled = True
-flush_logs = True # Cleanup to see if this helps with memory
 
-# Path for the log file
-log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
 
 # Get the directory of the current script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -284,12 +280,6 @@ def main():
     # Commands for system setup commented out for brevity
     while True:
         try:
-            # Check if the log file exists, create if not, and flush its contents
-            if not os.path.exists(log_path):
-                open(log_path, 'a').close()  # Create the file if it does not exist
-            else:
-                if flush_logs:
-                    open(log_path, 'w').close()  # Flush the contents if the file exists
 
             axon_ports = get_axon_ports()
             connections = get_established_connections(axon_ports)
