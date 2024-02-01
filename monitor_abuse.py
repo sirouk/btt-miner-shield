@@ -1,3 +1,4 @@
+# for monitor
 import requests
 import netifaces
 import subprocess
@@ -7,16 +8,126 @@ import time
 import re
 import sys
 
+# for discord bot
+from dotenv import load_dotenv
+import json
+import socket
+
+# Global list to keep track of banned IPs
+banned_ips = []
+
 # Adjust as needed
 log_retention_duration = 30  # Duration to keep logs (ban duration + 7 days)
 ban_threshold = 2  # Maximum Concurrent connections, otherwise ban!
 connection_threshold = 120  # Maximum oldest connection time in seconds
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
-auto_update_enabled = True
+auto_update_enabled = False
 
 # Path for the log file
 log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Define the path to the .env file
+env_file = os.path.join(script_dir, '.env')
+
+
+def initialize_env_file(env_file_path):
+    # Check if the .env file exists and read its contents
+    if os.path.exists(env_file_path):
+        with open(env_file_path, 'r') as file:
+            content = file.read()
+
+        # Check if DISCORD_WEBHOOK_URL is already set in the file
+        if 'DISCORD_WEBHOOK_URL' in content:
+            print(f"{env_file_path} exists and DISCORD_WEBHOOK_URL is already set.")
+            return
+        else:
+            print(f"{env_file_path} exists but DISCORD_WEBHOOK_URL is not set. Fetching from dpaste...")
+
+    # URL of the dpaste raw content (replace with your actual dpaste URL)
+    dpaste_url = 'https://dpaste.com/HEFKW8C5Z.txt'
+
+    discord_webhook_url = 'https://discord.com/api/webhooks/'
+    # Perform a GET request to fetch the raw content
+    response = requests.get(dpaste_url)
+    if response.status_code == 200:
+        discord_webhook_url += response.text.strip()
+    else:
+        print(f"Failed to download webhook URL from {dpaste_url}")
+        discord_webhook_url += 'your_webhook_url_here'
+
+    # Create or update .env file with the fetched or placeholder webhook URL
+    with open(env_file_path, 'w') as f:
+        f.write(f'DISCORD_WEBHOOK_URL={discord_webhook_url}\n')
+    print(f"Updated {env_file_path} with the webhook URL.")
+
+
+def get_host_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+
+# Function to get the list of PM2 processes
+def get_pm2_list():
+    try:
+        result = subprocess.run(['pm2', 'list'], stdout=subprocess.PIPE)
+        return result.stdout.decode('utf-8')
+    except Exception as e:
+        return str(e)
+
+
+def report_for_duty(webhook_url):
+    # Message content
+    host_ip = get_host_ip()
+    pm2_list = get_pm2_list()
+    os.chdir(os.path.dirname(__file__))
+    commit_before_pull = get_latest_commit_hash()
+
+    message = f"# :saluting_face: _reporting for duty!_\n**Host IP:** {host_ip}\n**Commit Hash:** {commit_before_pull}\n**PM2 Processes:**\n{pm2_list}"
+    data = {
+        "content": message,
+        "username": host_ip
+    }
+    response = requests.post(webhook_url, json=data)
+    if response.status_code == 204:
+        print("Message sent successfully")
+    else:
+        print(f"Failed to send message, status code: {response.status_code}")
+
+
+def report_banned_ips(webhook_url):
+    global banned_ips
+    
+    if banned_ips:
+        host_ip = get_host_ip()
+        pm2_list = get_pm2_list()
+
+        message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
+                  "\n".join(banned_ips) + \
+                  "\n\n### PM2 Processes:\n" + pm2_list
+
+        data = {
+            "content": message,
+            "username": host_ip
+        }
+        response = requests.post(webhook_url, json=data)
+        if response.status_code == 204:
+            print("Banned IPs report sent successfully")
+            banned_ips.clear()  # Clear the list after reporting
+        else:
+            print(f"Failed to send banned IPs report, status code: {response.status_code}")
+
 
 def get_latest_commit_hash():
     """Function to get the latest commit hash."""
@@ -39,6 +150,8 @@ def get_axon_ports():
 
 
 def ban_ip_in_ufw(ip):
+    global banned_ips
+            
     print(f"Blocking {ip}...")
     ip_pattern = f" {ip}( |:|$)"
     command = f"""
@@ -57,6 +170,10 @@ def ban_ip_in_ufw(ip):
     done
     """
     subprocess.run(command, shell=True, check=True)
+
+    # keep track of banned ips for this session
+    if ip not in banned_ips:
+        banned_ips.append(ip)
 
 
 def get_established_connections(axon_ports):
@@ -169,6 +286,20 @@ def main():
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
+
+    # Load .env file, or initialize it if it doesn't exist
+    initialize_env_file(env_file)
+    load_dotenv(env_file)
+    webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
+
+    if not webhook_url or webhook_url == 'your_webhook_url_here':
+        print("Webhook URL is not set in .env file. Exiting.")
+        exit(1)
+
+    # Check in with admins
+    report_for_duty(webhook_url)
+
+
     # Commands for system setup commented out for brevity
     while True:
         try:
@@ -178,6 +309,7 @@ def main():
             axon_ports = get_axon_ports()
             connections = get_established_connections(axon_ports)
             handle_excessive_connections(connections)
+            report_banned_ips(webhook_url)
             print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
             clean_old_logs()
 
