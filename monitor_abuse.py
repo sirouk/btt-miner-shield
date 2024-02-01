@@ -22,7 +22,7 @@ ban_threshold = 2  # Maximum Concurrent connections, otherwise ban!
 connection_threshold = 120  # Maximum oldest connection time in seconds
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
-auto_update_enabled = False
+auto_update_enabled = True
 
 # Path for the log file
 log_path = os.path.join(os.path.dirname(__file__), 'btt-miner-shield-abuse.log')
