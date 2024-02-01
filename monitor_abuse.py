@@ -9,7 +9,7 @@ import re
 import sys
 
 # for discord bot
-subprocess.run(["python3", "-m", "pip", "install", "dotenv"])
+subprocess.run(["python3", "-m", "pip", "install", "python-dotenv"])
 from dotenv import load_dotenv
 import json
 import socket
