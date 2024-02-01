@@ -88,14 +88,28 @@ def get_pm2_list():
         return str(e)
 
 
+def get_system_uptime():
+    try:
+        result = subprocess.run(["uptime", "-p"], capture_output=True, text=True)
+        return result.stdout.strip()
+    except Exception as e:
+        return f"Error getting system uptime: {e}"
+
+
 def report_for_duty(webhook_url):
     # Message content
     host_ip = get_host_ip()
     pm2_list = get_pm2_list()
     os.chdir(os.path.dirname(__file__))
     commit_before_pull = get_latest_commit_hash()
+    system_uptime = get_system_uptime()
 
-    message = f"# :saluting_face: _reporting for duty!_\n**Host IP:** {host_ip}\n**Commit Hash:** {commit_before_pull}\n**PM2 Processes:**\n{pm2_list}"
+    message = f"# :saluting_face: _reporting for duty!_\n" + \
+              f"**Host IP:** {host_ip}\n" + \
+              f"**Commit Hash:** {commit_before_pull}\n" + \
+              f"**System Uptime:** {system_uptime}\n" + \
+              f"**PM2 Processes:**\n{pm2_list}"
+
     data = {
         "content": message,
         "username": host_ip
