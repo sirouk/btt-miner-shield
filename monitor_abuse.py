@@ -118,6 +118,39 @@ def report_for_duty(webhook_url):
         print(f"Failed to send message, status code: {response.status_code}")
 
 
+def post_to_dpaste(content, lexer='python', expires='2592000', format='url'):
+    """
+    Post content to dpaste and return the URL of the snippet.
+
+    :param content: The content to paste.
+    :param lexer: The syntax highlighting option (default: python).
+    :param expires: Expiration time for the snippet (default: 2592000 seconds = 1 month).
+    :param format: The format of the API response (default: url).
+    :return: The URL of the created dpaste snippet.
+    """
+    # dpaste API endpoint
+    api_url = 'https://dpaste.org/api/'
+
+    # Data to be sent to dpaste
+    data = {
+        'content': content,
+        'lexer': lexer,
+        'expires': expires,
+        'format': format,
+    }
+
+    # Make the POST request
+    response = requests.post(api_url, data=data)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Return the URL of the snippet
+        return response.text.strip()  # Strip to remove any extra whitespace/newline
+    else:
+        # Return an error message or raise an exception
+        return "Failed to create dpaste snippet. Status code: {}".format(response.status_code)
+
+
 def report_banned_ips(webhook_url):
     global banned_ips
     
@@ -125,9 +158,17 @@ def report_banned_ips(webhook_url):
         host_ip = get_host_ip()
         pm2_list = get_pm2_list()
 
-        message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
-                  "\n".join(banned_ips) + \
-                  "\n\n### PM2 Processes:\n" + pm2_list
+        # Check if the list of banned IPs is longer than 10
+        if len(banned_ips) > 10:
+            # Post the entire list to dpaste and get the link
+            dpaste_link = post_to_dpaste("\n".join(banned_ips))
+            message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
+                      "\n".join(banned_ips[:10]) + \
+                      f"\n... and more.\nFull list: {dpaste_link}\n\n### PM2 Processes:\n" + pm2_list
+        else:
+            message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
+                      "\n".join(banned_ips) + \
+                      "\n\n### PM2 Processes:\n" + pm2_list
 
         data = {
             "content": message,
