@@ -18,10 +18,10 @@ import socket
 banned_ips = []
 
 # Adjust as needed
-ban_threshold = 3  # Maximum Concurrent connections, otherwise ban!
+ban_threshold = 2  # Maximum Concurrent connections, otherwise ban!
 connection_threshold = 120  # Maximum oldest connection time in seconds
 sleep_between_checks = 5  # Time in seconds between connection monitoring
-update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
+update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
 upgrade_btt = True # Set to true to upgrade machines to the latest bittensor
 
@@ -220,9 +220,8 @@ def ban_ip_in_ufw(ip):
 
     while sudo netstat -an | grep ESTABLISHED | grep -Eq '{ip_pattern}';
     do
-        sudo conntrack -D --orig-src {ip};
         sudo ss --kill -tn 'dst == {ip}';
-        sleep 0.25;
+        sleep 0.15;
     done
     """
     subprocess.run(command, shell=True, check=True)
@@ -301,8 +300,6 @@ def main():
 
     start_time = time.time()
 
-    subprocess.run(["sudo", "apt", "update"], check=True)
-    subprocess.run(["sudo", "apt", "install", "-y", "conntrack"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
