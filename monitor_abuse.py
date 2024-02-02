@@ -307,8 +307,8 @@ def main():
 
     # Bittensor upgrades (runs twice to deal with pip's dependency resolver)
     if upgrade_btt:
-        subprocess.run(["python3", "-m", "pip", "install, "--upgrade", "bittensor"], check=True)
-        subprocess.run(["python3", "-m", "pip", "install, "--upgrade", "bittensor"], check=True)
+        subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], check=True)
+        subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], check=True)
                     
 
 
