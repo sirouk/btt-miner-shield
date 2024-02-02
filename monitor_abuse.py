@@ -330,8 +330,10 @@ def main():
             axon_ports = get_axon_ports()
             connections = get_established_connections(axon_ports)
             handle_excessive_connections(connections)
-            report_banned_ips(webhook_url)
-            print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
+            banned_per_round = len(banned_ips)
+            if banned_per_round < 100:
+                report_banned_ips(webhook_url)
+                print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
 
             if auto_update_enabled and time.time() - start_time >= update_interval:
                 os.chdir(os.path.dirname(__file__))
@@ -352,7 +354,8 @@ def main():
         except Exception as e:
             print(f"Error occurred: {e}")
 
-        time.sleep(sleep_between_checks)
+        if banned_per_round == 0:
+            time.sleep(sleep_between_checks)
 
 if __name__ == "__main__":
     main()
