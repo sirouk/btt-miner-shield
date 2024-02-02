@@ -164,6 +164,7 @@ def report_banned_ips(webhook_url):
             # Post the entire list to dpaste and get the link
             dpaste_link = post_to_dpaste("\n".join(banned_ips))
             message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
+                      "\n@BTT_Miner-Alerts\n" + \
                       "\n".join(banned_ips[:10]) + \
                       f"\n... and more.\nFull list: {dpaste_link}\n\n### PM2 Processes:\n" + pm2_list
         else:
