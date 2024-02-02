@@ -23,6 +23,7 @@ connection_threshold = 120  # Maximum oldest connection time in seconds
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
 auto_update_enabled = True
+upgrade_btt = True # Set to true to upgrade machines to the latest bittensor
 
 
 # Get the directory of the current script
@@ -303,6 +304,12 @@ def main():
     subprocess.run(["sudo", "apt", "install", "-y", "conntrack"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+
+    # Bittensor upgrades (runs twice to deal with pip's dependency resolver)
+    if upgrade_btt:
+        subprocess.run(["python3", "-m", "pip", "install, "--upgrade", "bittensor"], check=True)
+        subprocess.run(["python3", "-m", "pip", "install, "--upgrade", "bittensor"], check=True)
+                    
 
 
     # Load .env file, or initialize it if it doesn't exist
