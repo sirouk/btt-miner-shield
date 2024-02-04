@@ -270,7 +270,7 @@ def start_connection_duration_monitor():
     # Start the script in the background
     try:
         axon_ports_str = ",".join(map(str, axon_ports))
-        subprocess.Popen(["bash", conn_monitor_path, ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
+        subprocess.Popen(["bash", conn_monitor_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
         print("Connection duration monitor started.")
     except Exception as e:
         print(f"Error starting connection duration monitor: {e}")
