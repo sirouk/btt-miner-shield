@@ -18,8 +18,9 @@ import socket
 banned_ips = []
 
 # Adjust as needed
-ban_threshold = 3  # Maximum Concurrent connections, otherwise ban!
-connection_threshold = 120  # Maximum oldest connection time in seconds
+ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
+ban_conn_time_over = 120  # Maximum oldest connection time in seconds
+states_file_timeout = 30 # The required freshness of the connection states file
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
@@ -31,6 +32,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Define the path to the .env file
 env_file = os.path.join(script_dir, '.env')
+states_file = os.path.join(script_dir, 'connection_states.log')
 
 
 def initialize_env_file(env_file_path):
@@ -262,15 +264,44 @@ def parse_ps_etime(etime):
     return days * 86400 + h * 3600 + m * 60 + s
 
 
-# THIS: does not work becuase it grabs the time that the connection with the main socket was established, no IP specific
+def start_connection_duration_monitor():
+    print("Started Connection Duration Monitor in background (test)")
+
+
 def get_max_connection_duration(ip):
-    cmd = f"lsof -t -i @{ip} | xargs -I {{}} ps --no-headers -o 'pid,etime' -p {{}} | sort -k2,2r | head -n1"
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
     max_duration = 0
-    if result.stdout.strip():
-        _, etime = result.stdout.strip().split(maxsplit=1)
-        max_duration = parse_ps_etime(etime)
+    current_time = int(time.time())
+
+    try:
+        file_stat = os.stat(states_file)
+        last_modification_time = file_stat.st_mtime
+
+        if current_time - last_modification_time <= (states_file_timeout):  # Adjust the time window as needed
+            with open(states_file, 'r') as states_file_contents:
+                for line in states_file_contents:
+                    parts = line.strip().split()
+                    if len(parts) == 2:
+                        log_ip_parts = parts[0].split(":")
+                        log_ip_address = log_ip_parts[0]
+                        epoch_time = int(parts[1])
+                        
+                        # Check if the IP is the same as the one we are interested in and within the last few minutes
+                        if log_ip_address == ip and current_time - epoch_time <= (5 * 60):  # Adjust the time window as needed
+                            max_duration = max(max_duration, current_time - epoch_time)
+        else:
+            raise FileNotFoundError("")
+
+    except FileNotFoundError:
+        print("Starting connection duration monitor...")
+        start_connection_duration_monitor()
+        pass
+        
+    except Exception as e:
+        # Handle all exceptions and print the error for debugging
+        print(f"Error: {e}")
+        pass
+        
     return max_duration
 
 
@@ -280,10 +311,8 @@ def handle_excessive_connections(connections):
     file_updated = False
     for connection in connections.splitlines():
         count, ip = connection.strip().split(None, 1)
-        #max_connection_duration = get_max_connection_duration(ip)
-        max_connection_duration = 0
-        #if (int(count) > ban_threshold or max_connection_duration > connection_threshold) and ip not in seen_ips:
-        if int(count) > ban_threshold and ip not in seen_ips:
+        max_connection_duration = get_max_connection_duration(ip)
+        if (int(count) > ban_conn_count_over or max_connection_duration > ban_conn_time_over) and ip not in seen_ips:
             ban_ip_in_ufw(ip)  # Uncomment if you want to enable IP banning again
             seen_ips.add(ip)
             file_updated = True
