@@ -250,22 +250,24 @@ def get_established_connections(axon_ports):
     return formatted_result
 
 
-def parse_ps_etime(etime):
-    """Parse the elapsed time format from ps and return total seconds."""
-    parts = etime.split('-')
-    days = 0
-    if len(parts) == 2:
-        days = int(parts[0])
-        time_part = parts[1]
-    else:
-        time_part = parts[0]
-
-    h, m, s = [int(i) for i in time_part.split(':')]
-    return days * 86400 + h * 3600 + m * 60 + s
-
-
 def start_connection_duration_monitor():
-    print("Started Connection Duration Monitor in background (test)")
+
+    # Check if the script is already running
+    conn_monitor_path = os.path.join(script_dir, 'connection_duration_monitor.sh')
+    try:
+        subprocess.check_output(["pgrep", "-f", conn_monitor_path])
+        # If the script is running, stop it
+        subprocess.run(["pkill", "-f", conn_monitor_path])
+    except subprocess.CalledProcessError:
+        pass  # Process is not running, no need to stop it
+
+    # Start the script in the background
+    try:
+        subprocess.Popen(["bash", script_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
+        print("Connection duration monitor started.")
+    except Exception as e:
+        print(f"Error starting connection duration monitor: {e}")
+        pass
 
 
 def get_max_connection_duration(ip):
