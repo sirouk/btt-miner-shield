@@ -21,7 +21,7 @@ banned_ips = []
 ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
 ban_conn_time_over = 180  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness of the connection states file
-sleep_between_checks = 5  # Time in seconds between connection monitoring
+sleep_between_checks = 3  # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
 upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
@@ -224,7 +224,7 @@ def ban_ip_in_ufw(ip):
     while sudo netstat -an | grep ESTABLISHED | grep -Eq '{ip_pattern}';
     do
         sudo ss --kill -tn 'dst == {ip}';
-        sleep 0.15;
+        sleep 0.05;
     done
     """
     subprocess.run(command, shell=True, check=True)
