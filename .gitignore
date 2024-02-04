@@ -1,2 +1,4 @@
 btt-miner-shield-abuse.log
 .env
+connection_durations.log
+connection_states.log
