@@ -9,7 +9,7 @@ Before you use this script, please make sure you have you have a rule present fo
 ## Requisites:
 ```bash
 sudo apt update
-sudo apt install jq npm -y
+sudo apt install npm -y
 sudo npm install pm2 -g
 pm2 update
 ```
@@ -28,11 +28,14 @@ pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter pyth
 
 ```bash
 # Adjust as needed
-log_retention_duration = 30  # Duration to keep logs (ban duration + 7 days)
-ban_threshold = 7 # Maximum Concurrent connections, otherwise ban!
-sleep_between_checks = 7 # Time in seconds between connection monitoring
-update_interval = 420  # Time in seconds check for updates (420 sec = 7 min)
+ban_conn_count_over = 5  # Maximum Concurrent connections, otherwise ban!
+ban_conn_time_over = 300  # Maximum oldest connection time in seconds
+states_file_timeout = 30 # The required freshness of the connection states file
+sleep_between_checks = 5  # Time in seconds between connection monitoring
+update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
+upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
+discord_mention_code = '<@&1234567890987654321>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
 ```
 
 
