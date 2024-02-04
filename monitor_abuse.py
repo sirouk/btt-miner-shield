@@ -18,8 +18,8 @@ import socket
 banned_ips = []
 
 # Adjust as needed
-ban_conn_count_over = 5  # Maximum Concurrent connections, otherwise ban!
-ban_conn_time_over = 300  # Maximum oldest connection time in seconds
+ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
+ban_conn_time_over = 180  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness of the connection states file
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
