@@ -23,8 +23,8 @@ connection_threshold = 120  # Maximum oldest connection time in seconds
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
-upgrade_btt = True # Set to true to upgrade machines to the latest bittensor
-
+upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
+discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
 
 # Get the directory of the current script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -164,12 +164,12 @@ def report_banned_ips(webhook_url):
             # Post the entire list to dpaste and get the link
             dpaste_link = post_to_dpaste("\n".join(banned_ips))
             message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
-                      "\n@BTT_Miner-Alerts\n" + \
+                      "\n" + discord_mention_code + "\n" + \
                       "\n".join(banned_ips[:10]) + \
                       f"\n... and more.\nFull list: {dpaste_link}\n\n### PM2 Processes:\n" + pm2_list
         else:
             message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
-                      "\n@BTT_Miner-Alerts\n" + \
+                      "\n" + discord_mention_code + "\n" + \
                       "\n".join(banned_ips) + \
                       "\n\n### PM2 Processes:\n" + pm2_list
 
