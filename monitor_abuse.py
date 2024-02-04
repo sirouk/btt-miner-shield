@@ -250,8 +250,8 @@ def get_established_connections(axon_ports):
     return formatted_result
 
 
-def start_connection_duration_monitor():
-
+def stop_connection_duration_monitor():
+    
     # Check if the script is already running
     conn_monitor_path = os.path.join(script_dir, 'connection_duration_monitor.sh')
     try:
@@ -261,9 +261,16 @@ def start_connection_duration_monitor():
     except subprocess.CalledProcessError:
         pass  # Process is not running, no need to stop it
 
+
+def start_connection_duration_monitor():
+
+    # Stop the script from running
+    stop_connection_duration_monitor()
+
     # Start the script in the background
     try:
-        subprocess.Popen(["bash", script_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
+        axon_ports_str = ",".join(map(str, axon_ports))
+        subprocess.Popen(["bash", conn_monitor_path, ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
         print("Connection duration monitor started.")
     except Exception as e:
         print(f"Error starting connection duration monitor: {e}")
@@ -382,6 +389,10 @@ def main():
 
                 subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
                 subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+
+                # Trigger the reset of the connection monitor
+                # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
+                start_connection_duration_monitor()
 
         except Exception as e:
             print(f"Error occurred: {e}")
