@@ -23,10 +23,10 @@ subprocess.run(["sudo", "apt", "install", "-y", "net-tools"])
 banned_ips = []  # Now will contain dicts with ip, port, and reason
 
 # Adjust as needed
-ban_conn_count_over = 4  # Maximum Concurrent connections, otherwise ban!
-ban_conn_time_over = 300  # Maximum oldest connection time in seconds
-states_file_timeout = 30 # The required freshness of the connection states file
-sleep_between_checks = 4  # Time in seconds between connection monitoring
+ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
+ban_conn_time_over = 240  # Maximum oldest connection time in seconds
+states_file_timeout = 30 # The required freshness in seconds of the connection states file
+sleep_between_checks = 3  # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
 upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
@@ -328,20 +328,27 @@ def get_max_connection_duration(ip):
 
 
 def handle_excessive_connections(connections):
-    seen_ips = set()
     
-    file_updated = False
+    seen_ips = set()
     for conn in connections:
         ip = conn["ip"]
         port = conn["port"]
         count = conn["count"]
         max_connection_duration = get_max_connection_duration(ip)
+        
+        # Construct the reason string based on the condition
+        if count > ban_conn_count_over:
+            reason = f"Excessive connections ({count})"
+        else:
+            reason = f"Long connection duration ({max_connection_duration}s)"
+        
+        # Check if either condition is met for banning
         if count > ban_conn_count_over or max_connection_duration > ban_conn_time_over:
-            reason = "Excessive connections" if count > ban_conn_count_over else "Long connection duration"
             if ip not in seen_ips:
-                # Now include port and reason in the ban
+                # Include port, reason, and ban details in the ban
                 ban_ip_in_ufw(ip, port, reason)
                 seen_ips.add(ip)
+                # Log detailed information about the ban
                 print(f"[INFO] IP: {ip}, Port: {port}, Count: {count}, Duration: {max_connection_duration}s")
 
 
