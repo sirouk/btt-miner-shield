@@ -14,14 +14,19 @@ from dotenv import load_dotenv
 import json
 import socket
 
-# Global list to keep track of banned IPs
-banned_ips = []
+# requisite for netstat
+subprocess.run(["sudo", "apt", "update"])
+subprocess.run(["sudo", "apt", "install", "-y", "net-tools"])
+
+
+# Global list to keep track of banned IPs and reasons
+banned_ips = []  # Now will contain dicts with ip, port, and reason
 
 # Adjust as needed
-ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
-ban_conn_time_over = 180  # Maximum oldest connection time in seconds
+ban_conn_count_over = 4  # Maximum Concurrent connections, otherwise ban!
+ban_conn_time_over = 300  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness of the connection states file
-sleep_between_checks = 3  # Time in seconds between connection monitoring
+sleep_between_checks = 4  # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 auto_update_enabled = True
 upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
@@ -161,18 +166,22 @@ def report_banned_ips(webhook_url):
         host_ip = get_host_ip()
         pm2_list = get_pm2_list()
 
+        # Format the banned IPs message with port and reason
+        formatted_bans = [f"IP: {ban['ip']}, Port: {ban['port']}, Reason: {ban['reason']}" for ban in banned_ips]
+
         # Check if the list of banned IPs is longer than 10
-        if len(banned_ips) > 10:
+        if len(formatted_bans) > 10:
             # Post the entire list to dpaste and get the link
-            dpaste_link = post_to_dpaste("\n".join(banned_ips))
+            dpaste_content = "\n".join([f"{ban['ip']} on Port {ban['port']} due to {ban['reason']}" for ban in banned_ips])
+            dpaste_link = post_to_dpaste(dpaste_content)
             message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
                       "\n" + discord_mention_code + "\n" + \
-                      "\n".join(banned_ips[:10]) + \
+                      "\n".join(formatted_bans[:10]) + \
                       f"\n... and more.\nFull list: {dpaste_link}\n\n### PM2 Processes:\n" + pm2_list
         else:
             message = f"# :warning: Banned IPs Report from {host_ip}:\n" + \
                       "\n" + discord_mention_code + "\n" + \
-                      "\n".join(banned_ips) + \
+                      "\n".join(formatted_bans) + \
                       "\n\n### PM2 Processes:\n" + pm2_list
 
         data = {
@@ -207,10 +216,10 @@ def get_axon_ports():
     return list(ports)
 
 
-def ban_ip_in_ufw(ip):
+def ban_ip_in_ufw(ip, port, reason):
     global banned_ips
             
-    print(f"Blocking {ip}...")
+    print(f"Blocking {ip} on port {port} due to {reason}...")
     ip_pattern = f" {ip}( |:|$)"
     command = f"""
     sudo iptables -I INPUT -s {ip} -j DROP;
@@ -230,8 +239,9 @@ def ban_ip_in_ufw(ip):
     subprocess.run(command, shell=True, check=True)
 
     # keep track of banned ips for this session
-    if ip not in banned_ips:
-        banned_ips.append(ip)
+    banned_details = {"ip": ip, "port": port, "reason": reason}
+    if banned_details not in banned_ips:
+        banned_ips.append(banned_details)
 
 
 def get_established_connections(axon_ports):
@@ -245,9 +255,10 @@ def get_established_connections(axon_ports):
             service_port = int(parts[0].split(':')[-1])
             accessing_ip = re.search(ipv4_regex, parts[1]).group() if re.search(ipv4_regex, parts[1]) else None
             if service_port in axon_ports and service_port >= 1000 and accessing_ip:  # Filter for service ports >= 1000
-                connections[(service_port, accessing_ip)] = connections.get((service_port, accessing_ip), 0) + 1
-    formatted_result = "\n".join(f"{count} {ip}" for (port, ip), count in connections.items())
-    return formatted_result
+                key = (service_port, accessing_ip)
+                connections[key] = connections.get(key, 0) + 1
+    # Return a list of dictionaries instead of a formatted string
+    return [{"ip": ip, "port": port, "count": count} for (port, ip), count in connections.items()]
 
 
 def stop_connection_duration_monitor():
@@ -320,19 +331,18 @@ def handle_excessive_connections(connections):
     seen_ips = set()
     
     file_updated = False
-    for connection in connections.splitlines():
-        count, ip = connection.strip().split(None, 1)
+    for conn in connections:
+        ip = conn["ip"]
+        port = conn["port"]
+        count = conn["count"]
         max_connection_duration = get_max_connection_duration(ip)
-        if (int(count) > ban_conn_count_over or max_connection_duration > ban_conn_time_over) and ip not in seen_ips:
-            ban_ip_in_ufw(ip)  # Uncomment if you want to enable IP banning again
-            seen_ips.add(ip)
-            file_updated = True
-            print(f"[INFO] IP: {ip}, Count: {count}, Duration: {max_connection_duration}s")
-
-
-    if file_updated:
-        subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
-        subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+        if count > ban_conn_count_over or max_connection_duration > ban_conn_time_over:
+            reason = "Excessive connections" if count > ban_conn_count_over else "Long connection duration"
+            if ip not in seen_ips:
+                # Now include port and reason in the ban
+                ban_ip_in_ufw(ip, port, reason)
+                seen_ips.add(ip)
+                print(f"[INFO] IP: {ip}, Port: {port}, Count: {count}, Duration: {max_connection_duration}s")
 
 
 def main():
@@ -348,7 +358,6 @@ def main():
     if upgrade_btt:
         subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], check=True)
         subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], check=True)
-                    
 
 
     # Load .env file, or initialize it if it doesn't exist
