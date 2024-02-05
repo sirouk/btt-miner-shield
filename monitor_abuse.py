@@ -24,7 +24,7 @@ banned_ips = []  # Now will contain dicts with ip, port, and reason
 
 # Adjust as needed
 ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
-ban_conn_time_over = 300  # Maximum oldest connection time in seconds
+ban_conn_time_over = 330  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness in seconds of the connection states file
 sleep_between_checks = 3  # Time in seconds between connection monitoring
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
