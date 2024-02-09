@@ -1,36 +1,51 @@
 # for monitor
+import os
 import requests
 import netifaces
 import subprocess
+
 import datetime
-import os
 import time
+subprocess.run(["python3", "-m", "pip", "install", "pytz"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+import pytz
+subprocess.run(["python3", "-m", "pip", "install", "tzlocal"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+from tzlocal import get_localzone
+
 import re
 import sys
 
 # for discord bot
-subprocess.run(["python3", "-m", "pip", "install", "python-dotenv"])
+subprocess.run(["python3", "-m", "pip", "install", "python-dotenv"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 from dotenv import load_dotenv
 import json
 import socket
 
 # requisite for netstat
-subprocess.run(["sudo", "apt", "update"])
+subprocess.run(["sudo", "apt", "update"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 subprocess.run(["sudo", "apt", "install", "-y", "net-tools"])
 
 
-# Global list to keep track of banned IPs and reasons
-banned_ips = []  # Now will contain dicts with ip, port, and reason
 
-# Adjust as needed
+# Updates
+auto_update_enabled = True
+update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
+upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
+
+# Defense
 ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
 ban_conn_time_over = 330  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness in seconds of the connection states file
 sleep_between_checks = 3  # Time in seconds between connection monitoring
-update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
-auto_update_enabled = True
-upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
+
+# Uptime
+auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
+oldest_debug_axon_minutes = 20 # Time in minutes before considering a pm2 process to be dead and not doing any work
+process_log_lines_lookback = 500 # Number of lines to look back for meaningful work
+
+# Comms
 discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
+
+
 
 # Get the directory of the current script
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +53,10 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # Define the path to the .env file
 env_file = os.path.join(script_dir, '.env')
 states_file = os.path.join(script_dir, 'connection_states.log')
+
+# Global list to keep track of banned IPs and reasons
+banned_ips = []  # Now will contain dicts with ip, port, and reason
+
 
 
 def initialize_env_file(env_file_path):
@@ -93,6 +112,131 @@ def get_pm2_list():
         return str(e)
 
 
+def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results):
+    host_ip = get_host_ip()
+    pm2_list = get_pm2_list()
+    os.chdir(os.path.dirname(__file__))
+    commit_before_pull = get_latest_commit_hash()
+    system_uptime = get_system_uptime()
+
+    final_message = f"**Issue w/PM2 ID:** {pm2_id}\n" + \
+              f"**Host IP:** {host_ip}\n" + \
+              f"**Commit Hash:** {commit_before_pull}\n" + \
+              f"**System Uptime:** {system_uptime}\n\n" + \
+              f"**PM2 Processes:**\n\n{pm2_list}\n" + \
+              f"{message}"
+    
+    if restart_results != string.empty:
+        final_message += f"\n\n**Restart Results:\n{restart_results}"
+
+    data = {"content": final_message}
+    response = requests.post(webhook_url, json=data)
+    print(f"Discord message sent, status code: {response.status_code}")
+
+
+def calculate_uptime_minutes(uptime_str):
+    # Define multipliers for each unit in minutes
+    time_multipliers = {
+        'w': 10080,  # 1 week = 7 days * 24 hours * 60 minutes
+        'd': 1440,   # 1 day = 24 hours * 60 minutes
+        'h': 60,     # 1 hour = 60 minutes
+        'm': 1,      # 1 minute = 1 minute
+        's': 1/60    # 1 second = 1/60 minutes
+    }
+
+    total_minutes = 0
+    # Extract all parts with units and their values
+    parts = re.findall(r'(\d+)([wdhms])', uptime_str)
+
+    for value, unit in parts:
+        # Convert each part to minutes and add to the total
+        total_minutes += int(value) * time_multipliers.get(unit, 0)
+
+    return total_minutes
+
+
+def get_pm2_process_uptime():
+    cmd = ['pm2', 'ls', '-m']
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    
+    # Adjust the regular expression to match the process name, pm2 id, pid, and uptime across multiple lines
+    process_details = re.findall(
+        r'\+\-\-\- ([\w\-]+)\n.*?namespace.*?\n.*?version.*?\n.*?pid\s*:\s*(\d+)\n.*?pm2 id\s*:\s*(\d+)\n.*?status.*?\n.*?mode.*?\n.*?restarted.*?\n.*?uptime\s*:\s*([\w\d]+)',
+        result.stdout, 
+        re.DOTALL
+    )
+
+    # Convert details to a dictionary {pm2_id: {'name': name, 'pid': pid, 'uptime_minutes': uptime_minutes}}
+    uptime_dict = {
+        pm2_id: {
+            "name": name,
+            "pid": pid,
+            "uptime_minutes": calculate_uptime_minutes(uptime_str)
+        } 
+        for name, pid, pm2_id, uptime_str in process_details
+    }
+    
+    return uptime_dict
+
+
+def check_processes_axon_activity(webhook_url):
+    pm2_uptime = get_pm2_process_uptime()
+    print(pm2_uptime)
+
+    # Corrected loop to properly unpack the dictionary
+    for pm2_id, details in pm2_uptime.items():
+        name = details['name']
+        pid = details['pid']
+        uptime_minutes = details['uptime_minutes']
+
+        print(f"Checking PM2 '{name}' (ID: {pm2_id}, PID: {pid}) Uptime: {uptime_minutes}...")
+
+        if uptime_minutes < oldest_debug_axon_minutes:
+            print(f"Skipping PM2 '{name}' (ID: {pm2_id}, PID: {pid}) due to uptime {uptime_minutes} minutes less than {oldest_debug_axon_minutes} minutes.")
+            continue
+
+        latest_timestamp = None
+        # check for last meaningful axon DEBUG that is not a 404 error
+        cmd_logs = f"pm2 logs {pm2_id} --nostream --lines {process_log_lines_lookback} | grep -e 'DEBUG' | grep -e 'axon' | grep -e '-->' | grep -v '| 404 |'"
+        logs_result = subprocess.run(cmd_logs, capture_output=True, text=True, shell=True)
+
+        # Check for axon timestamp
+        debug_lines = re.findall(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})', logs_result.stdout)
+
+        for timestamp_str in debug_lines:
+            timestamp = datetime.datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
+            if latest_timestamp is None or timestamp > latest_timestamp:
+                latest_timestamp = timestamp
+
+        if latest_timestamp:
+            # Calculate the time difference between now and the latest timestamp
+            time_diff = datetime.datetime.now() - latest_timestamp
+            time_diff_minutes = time_diff.total_seconds() / 60
+
+            if time_diff_minutes > oldest_debug_axon_minutes:
+                
+                restart_results = ""
+                if auto_restart_process:
+                    # Restart the PM2 process by its ID
+                    restart_command = ["pm2", "restart", str(pm2_id)]
+                    try:
+                        subprocess.run(restart_command, check=True)
+                        restart_results += f"Successfully restarted PM2 process with ID: {pm2_id}"
+                    except subprocess.CalledProcessError as e:
+                        restart_results += f"Failed to restart PM2 process with ID: {pm2_id}. Error: {e}"
+
+                    restart_results += f"\n\n{get_pm2_list()}"
+                    print(restart_results)
+                
+                # Report
+                message = f"PM2 ***{name}*** (ID: {pm2_id}, PID: {pid}) has a DEBUG log older than {oldest_debug_axon_minutes} minutes. Latest DEBUG machine timestamp: ***{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')}***, Process Uptime: {uptime_minutes} minutes. "
+                report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results)
+            else:
+                print(f"PM2 ID {pm2_id} (PID {pid})'s latest DEBUG timestamp is within {oldest_debug_axon_minutes} minutes.")
+        else:
+            print(f"No DEBUG timestamp found in the latest logs for PM2 ID {pm2_id}.")
+
+
 def get_system_uptime():
     try:
         result = subprocess.run(["uptime", "-p"], capture_output=True, text=True)
@@ -113,7 +257,7 @@ def report_for_duty(webhook_url):
               f"**Host IP:** {host_ip}\n" + \
               f"**Commit Hash:** {commit_before_pull}\n" + \
               f"**System Uptime:** {system_uptime}\n" + \
-              f"**PM2 Processes:**\n{pm2_list}"
+              f"**PM2 Processes:**\n\n{pm2_list}"
 
     data = {
         "content": message,
@@ -127,15 +271,7 @@ def report_for_duty(webhook_url):
 
 
 def post_to_dpaste(content, lexer='python', expires='2592000', format='url'):
-    """
-    Post content to dpaste and return the URL of the snippet.
 
-    :param content: The content to paste.
-    :param lexer: The syntax highlighting option (default: python).
-    :param expires: Expiration time for the snippet (default: 2592000 seconds = 1 month).
-    :param format: The format of the API response (default: url).
-    :return: The URL of the created dpaste snippet.
-    """
     # dpaste API endpoint
     api_url = 'https://dpaste.org/api/'
 
@@ -363,8 +499,7 @@ def main():
 
     # Bittensor upgrades (runs twice to deal with pip's dependency resolver)
     if upgrade_btt:
-        subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], check=True)
-        subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], check=True)
+        subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
     # Load .env file, or initialize it if it doesn't exist
@@ -374,10 +509,15 @@ def main():
 
     if not webhook_url or webhook_url == 'your_webhook_url_here':
         print("Webhook URL is not set in .env file. Exiting.")
-        exit(1)
+        exit(1)    
 
     # Check in with admins
     report_for_duty(webhook_url)
+
+
+    # Start connection monitor and check axons
+    start_connection_duration_monitor()
+    check_processes_axon_activity(webhook_url)
 
 
     # Commands for system setup commented out for brevity
@@ -411,6 +551,8 @@ def main():
                 # Trigger the reset of the connection monitor
                 # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
                 start_connection_duration_monitor()
+
+                check_processes_axon_activity(webhook_url)
 
         except Exception as e:
             print(f"Error occurred: {e}")
