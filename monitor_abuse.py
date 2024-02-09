@@ -126,7 +126,10 @@ def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_result
                 f"{message}"
     
     if restart_results:
-        final_message += f"\n\n**Restart Results:\n{restart_results}"
+        dpaste_content = final_message
+        dpaste_content += f"\n\n**Restart Results:\n{restart_results}"        
+        dpaste_link = post_to_dpaste(dpaste_content)
+        final_message += f"\n\nRestart Details: {dpaste_link}"
 
     data = {
         "content": final_message,
