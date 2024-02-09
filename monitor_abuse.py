@@ -546,6 +546,8 @@ def main():
                     print("No updates found, continuing...")
                     start_time = time.time()
 
+                subprocess.run(["sudo", "ufw", "allow", "22"], check=True)
+
                 subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
                 subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
