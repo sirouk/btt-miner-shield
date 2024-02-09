@@ -114,22 +114,24 @@ def get_pm2_list():
 
 def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results):
     host_ip = get_host_ip()
-    pm2_list = get_pm2_list()
     os.chdir(os.path.dirname(__file__))
     commit_before_pull = get_latest_commit_hash()
     system_uptime = get_system_uptime()
 
-    final_message = f"**Issue w/PM2 ID:** {pm2_id}\n" + \
-              f"**Host IP:** {host_ip}\n" + \
-              f"**Commit Hash:** {commit_before_pull}\n" + \
-              f"**System Uptime:** {system_uptime}\n\n" + \
-              f"**PM2 Processes:**\n\n{pm2_list}\n" + \
-              f"{message}"
+    final_message = f"# :warning: Inactive Axon Port on PM2 ID: {pm2_id}\n" + \
+                "\n" + discord_mention_code + "\n" + \
+                f"**Host IP:** {host_ip}\n" + \
+                f"**Commit Hash:** {commit_before_pull}\n" + \
+                f"**System Uptime:** {system_uptime}\n\n" + \
+                f"{message}"
     
     if restart_results != string.empty:
         final_message += f"\n\n**Restart Results:\n{restart_results}"
 
-    data = {"content": final_message}
+    data = {
+        "content": final_message,
+        "username": host_ip
+    }
     response = requests.post(webhook_url, json=data)
     print(f"Discord message sent, status code: {response.status_code}")
 
@@ -214,8 +216,9 @@ def check_processes_axon_activity(webhook_url):
             time_diff_minutes = time_diff.total_seconds() / 60
 
             if time_diff_minutes > oldest_debug_axon_minutes:
+
+                restart_results = f"**PM2 Processes (BEFORE):**\n\n{get_pm2_list()}\n"
                 
-                restart_results = ""
                 if auto_restart_process:
                     # Restart the PM2 process by its ID
                     restart_command = ["pm2", "restart", str(pm2_id)]
@@ -225,7 +228,7 @@ def check_processes_axon_activity(webhook_url):
                     except subprocess.CalledProcessError as e:
                         restart_results += f"Failed to restart PM2 process with ID: {pm2_id}. Error: {e}"
 
-                    restart_results += f"\n\n{get_pm2_list()}"
+                    restart_results += f"**PM2 Processes (AFTER):**\n\n{get_pm2_list()}\n"
                     print(restart_results)
                 
                 # Report
@@ -514,11 +517,9 @@ def main():
     # Check in with admins
     report_for_duty(webhook_url)
 
-
     # Start connection monitor and check axons
     start_connection_duration_monitor()
     check_processes_axon_activity(webhook_url)
-
 
     # Commands for system setup commented out for brevity
     while True:
