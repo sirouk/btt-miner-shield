@@ -125,7 +125,7 @@ def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_result
                 f"**System Uptime:** {system_uptime}\n\n" + \
                 f"{message}"
     
-    if restart_results != string.empty:
+    if restart_results:
         final_message += f"\n\n**Restart Results:\n{restart_results}"
 
     data = {
@@ -546,11 +546,11 @@ def main():
                     print("No updates found, continuing...")
                     start_time = time.time()
 
-                subprocess.run(["sudo", "ufw", "delete", "allow", "22"], check=True)
-
+                
                 subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
                 subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
+                
                 # Trigger the reset of the connection monitor
                 # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
                 start_connection_duration_monitor()
