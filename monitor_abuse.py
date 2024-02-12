@@ -512,7 +512,7 @@ def handle_excessive_connections(connections, axon_ports):
             reason = ""
 
         # Check if either condition is met for banning
-        if ip_banned and ip not in seen_ips:
+        if ip and ip_banned and ip not in seen_ips:
             # Include port, reason, and ban details in the ban
             ban_ip_in_ufw(ip, port, reason)
             seen_ips.add(ip)
