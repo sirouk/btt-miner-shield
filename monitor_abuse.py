@@ -502,7 +502,7 @@ def handle_excessive_connections(connections, axon_ports):
 
         # Construct the reason string based on the condition
         ip_banned = False
-        if (port in axon_ports and count > ban_conn_count_over) or (count > ban_excessive_conn_count_over):
+        if (port in axon_ports and per_port_count > ban_conn_count_over) or (count > ban_excessive_conn_count_over):
             ip_banned = True
             reason = f"Excessive connections ({count})"
         elif max_connection_duration > ban_conn_time_over:
