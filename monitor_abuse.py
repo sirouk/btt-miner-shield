@@ -34,6 +34,7 @@ upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
 
 # Defense
 ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
+ban_excessive_conn_count_over = 10 # Maximum Concurrent connections regardless of port (for a higher threshold)
 ban_conn_time_over = 330  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness in seconds of the connection states file
 sleep_between_checks = 3  # Time in seconds between connection monitoring
@@ -125,10 +126,10 @@ def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_result
                 f"**Commit Hash:** {commit_before_pull}\n" + \
                 f"**System Uptime:** {system_uptime}\n\n" + \
                 f"{message}"
-    
+
     if restart_results:
         dpaste_content = final_message
-        dpaste_content += f"\n\n**Restart Results:\n{restart_results}"        
+        dpaste_content += f"\n\n**Restart Results:\n{restart_results}"
         dpaste_link = post_to_dpaste(dpaste_content)
         final_message += f"\n\nRestart Details: {dpaste_link}"
 
@@ -164,11 +165,11 @@ def calculate_uptime_minutes(uptime_str):
 def get_pm2_process_uptime():
     cmd = ['pm2', 'ls', '-m']
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     # Adjust the regular expression to match the process name, pm2 id, pid, and uptime across multiple lines
     process_details = re.findall(
         r'\+\-\-\- ([\w\-]+)\n.*?namespace.*?\n.*?version.*?\n.*?pid\s*:\s*(\d+)\n.*?pm2 id\s*:\s*(\d+)\n.*?status.*?\n.*?mode.*?\n.*?restarted.*?\n.*?uptime\s*:\s*([\w\d]+)',
-        result.stdout, 
+        result.stdout,
         re.DOTALL
     )
 
@@ -178,10 +179,10 @@ def get_pm2_process_uptime():
             "name": name,
             "pid": pid,
             "uptime_minutes": calculate_uptime_minutes(uptime_str)
-        } 
+        }
         for name, pid, pm2_id, uptime_str in process_details
     }
-    
+
     return uptime_dict
 
 
@@ -222,7 +223,7 @@ def check_processes_axon_activity(webhook_url):
             if time_diff_minutes > oldest_debug_axon_minutes:
 
                 restart_results = f"**PM2 Processes (BEFORE):**\n\n{get_pm2_list()}\n"
-                
+
                 if auto_restart_process:
                     # Restart the PM2 process by its ID
                     restart_command = ["pm2", "restart", str(pm2_id)]
@@ -234,7 +235,7 @@ def check_processes_axon_activity(webhook_url):
 
                     restart_results += f"**PM2 Processes (AFTER):**\n\n{get_pm2_list()}\n"
                     print(restart_results)
-                
+
                 # Report
                 message = f"PM2 ***{name}*** (ID: {pm2_id}, PID: {pid}) has a DEBUG log older than {oldest_debug_axon_minutes} minutes. Latest DEBUG machine timestamp: ***{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')}***, Process Uptime: {uptime_minutes} minutes. "
                 report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results)
@@ -304,7 +305,7 @@ def post_to_dpaste(content, lexer='python', expires='2592000', format='url'):
 
 def report_banned_ips(webhook_url):
     global banned_ips
-    
+
     if banned_ips:
         host_ip = get_host_ip()
         pm2_list = get_pm2_list()
@@ -361,7 +362,7 @@ def get_axon_ports():
 
 def ban_ip_in_ufw(ip, port, reason):
     global banned_ips
-            
+
     print(f"Blocking {ip} on port {port} due to {reason}...")
     ip_pattern = f" {ip}( |:|$)"
     command = f"""
@@ -387,7 +388,7 @@ def ban_ip_in_ufw(ip, port, reason):
         banned_ips.append(banned_details)
 
 
-def get_established_connections(axon_ports):
+def get_established_connections():
     ipv4_regex = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
     cmd = "sudo netstat -an | grep ESTABLISHED | awk '{if ($4 !~ /:22$/ && $5 !~ /:22$/) print $4, $5}'"
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -397,15 +398,16 @@ def get_established_connections(axon_ports):
         if len(parts) == 2:
             service_port = int(parts[0].split(':')[-1])
             accessing_ip = re.search(ipv4_regex, parts[1]).group() if re.search(ipv4_regex, parts[1]) else None
-            if service_port in axon_ports and service_port >= 1000 and accessing_ip:  # Filter for service ports >= 1000
-                key = (service_port, accessing_ip)
-                connections[key] = connections.get(key, 0) + 1
+
+            key = (service_port, accessing_ip)
+            connections[key] = connections.get(key, 0) + 1
+
     # Return a list of dictionaries instead of a formatted string
     return [{"ip": ip, "port": port, "count": count} for (port, ip), count in connections.items()]
 
 
 def stop_connection_duration_monitor():
-    
+
     # Check if the script is already running
     conn_monitor_path = os.path.join(script_dir, 'connection_duration_monitor.sh')
     try:
@@ -450,7 +452,7 @@ def get_max_connection_duration(ip):
                         log_ip_parts = parts[0].split(":")
                         log_ip_address = log_ip_parts[0]
                         epoch_time = int(parts[1])
-                        
+
                         # Check if the IP is the same as the one we are interested in and within the last few minutes
                         if log_ip_address == ip and current_time - epoch_time <= (5 * 60):  # Adjust the time window as needed
                             max_duration = max(max_duration, current_time - epoch_time)
@@ -461,38 +463,61 @@ def get_max_connection_duration(ip):
         print("Starting connection duration monitor...")
         start_connection_duration_monitor()
         pass
-        
+
     except Exception as e:
         # Handle all exceptions and print the error for debugging
         print(f"Error: {e}")
         pass
-        
+
     return max_duration
 
 
-def handle_excessive_connections(connections):
-    
+def count_ip_connections(connections):
+
+    ip_sum = {}
+    for entry in connections:
+        ip = entry['ip']
+        count = entry['count']
+
+        if ip in ip_sum:
+            ip_sum[ip] += count
+        else:
+            ip_sum[ip] = count
+
+    return ip_sum
+
+
+def handle_excessive_connections(connections, axon_ports):
+
+    ip_conn_count = count_ip_connections(connections)
+
     seen_ips = set()
     for conn in connections:
+
         ip = conn["ip"]
         port = conn["port"]
-        count = conn["count"]
+        per_port_count = conn["count"]
+        count = ip_conn_count[ip]
         max_connection_duration = get_max_connection_duration(ip)
-        
+
         # Construct the reason string based on the condition
-        if count > ban_conn_count_over:
+        ip_banned = False
+        if (port in axon_ports and count > ban_conn_count_over) or (count > ban_excessive_conn_count_over):
+            ip_banned = True
             reason = f"Excessive connections ({count})"
-        else:
+        elif max_connection_duration > ban_conn_time_over:
+            ip_banned = True
             reason = f"Long connection duration ({max_connection_duration}s)"
-        
+        else:
+            reason = ""
+
         # Check if either condition is met for banning
-        if count > ban_conn_count_over or max_connection_duration > ban_conn_time_over:
-            if ip not in seen_ips:
-                # Include port, reason, and ban details in the ban
-                ban_ip_in_ufw(ip, port, reason)
-                seen_ips.add(ip)
-                # Log detailed information about the ban
-                print(f"[INFO] IP: {ip}, Port: {port}, Count: {count}, Duration: {max_connection_duration}s")
+        if ip_banned and ip not in seen_ips:
+            # Include port, reason, and ban details in the ban
+            ban_ip_in_ufw(ip, port, reason)
+            seen_ips.add(ip)
+            # Log detailed information about the ban
+            print(f"[INFO] IP: {ip}, Port: {port}, Count: {count}, Duration: {max_connection_duration}s")
 
 
 def main():
@@ -516,7 +541,7 @@ def main():
 
     if not webhook_url or webhook_url == 'your_webhook_url_here':
         print("Webhook URL is not set in .env file. Exiting.")
-        exit(1)    
+        exit(1)
 
     # Check in with admins
     report_for_duty(webhook_url)
@@ -530,8 +555,8 @@ def main():
         try:
 
             axon_ports = get_axon_ports()
-            connections = get_established_connections(axon_ports)
-            handle_excessive_connections(connections)
+            connections = get_established_connections()
+            handle_excessive_connections(connections, axon_ports)
             banned_per_round = len(banned_ips)
             if banned_per_round < 100:
                 report_banned_ips(webhook_url)
@@ -550,11 +575,11 @@ def main():
                     print("No updates found, continuing...")
                     start_time = time.time()
 
-                
+
                 subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
                 subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
-                
+
                 # Trigger the reset of the connection monitor
                 # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
                 start_connection_duration_monitor()
