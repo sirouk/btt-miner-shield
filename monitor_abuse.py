@@ -1,9 +1,9 @@
 # for monitor
 import os
 import requests
+import subprocess
 subprocess.run(["python3", "-m", "pip", "install", "netifaces"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 import netifaces
-import subprocess
 
 import datetime
 import time
