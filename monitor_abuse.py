@@ -487,7 +487,7 @@ def count_ip_connections(connections):
     return ip_sum
 
 
-def handle_excessive_connections(connections, axon_ports):
+def handle_excessive_connections(connections, axon_ports, whitelist_ips):
 
     ip_conn_count = count_ip_connections(connections)
 
@@ -570,7 +570,7 @@ def main():
 
             axon_ports = get_axon_ports()
             connections = get_established_connections()
-            handle_excessive_connections(connections, axon_ports)
+            handle_excessive_connections(connections, axon_ports, whitelist_ips)
             banned_per_round = len(banned_ips)
             if banned_per_round < 100:
                 report_banned_ips(webhook_url)
