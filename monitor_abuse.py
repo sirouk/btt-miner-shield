@@ -498,6 +498,12 @@ def handle_excessive_connections(connections, axon_ports):
         port = conn["port"]
         per_port_count = conn["count"]
         count = ip_conn_count[ip]
+
+        if ip in seen_ips:
+            if ip not in whitelist_ips:
+                print(f"WARN: IP {ip} was previously banned, but still connected!")
+            continue # skip
+            
         max_connection_duration = get_max_connection_duration(ip)
 
         # Construct the reason string based on the condition
@@ -510,6 +516,11 @@ def handle_excessive_connections(connections, axon_ports):
             reason = f"Long connection duration ({max_connection_duration}s)"
         else:
             reason = ""
+
+        if ip and ip_banned and ip in whitelist_ips:
+            print(f"IP {ip} is whitelisted despite {reason}, skipping ban.")
+            seen_ips.add(ip)
+            continue  # Skip to the next connection without banning
 
         # Check if either condition is met for banning
         if ip and ip_banned and ip not in seen_ips:
@@ -538,6 +549,9 @@ def main():
     initialize_env_file(env_file)
     load_dotenv(env_file)
     webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
+    whitelist_ips = [ip.strip() for ip in os.getenv('WHITELIST_IPS', '').split(',') if ip.strip()]
+    if whitelist_ips:
+        print(f"[INFO] Whitelisted IP(s): {whitelist_ips}")
 
     if not webhook_url or webhook_url == 'your_webhook_url_here':
         print("Webhook URL is not set in .env file. Exiting.")
