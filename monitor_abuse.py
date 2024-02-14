@@ -41,7 +41,7 @@ sleep_between_checks = 5  # Time in seconds between connection monitoring
 
 # Uptime
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
-oldest_debug_axon_minutes = 10 # Time in minutes before considering a pm2 process to be dead and not doing any work
+oldest_debug_axon_minutes = 15 # Time in minutes before considering a pm2 process to be dead and not doing any work
 process_log_lines_lookback = 500 # Number of lines to look back for meaningful work
 
 # Comms
