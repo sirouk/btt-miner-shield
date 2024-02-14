@@ -120,7 +120,7 @@ def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_result
     commit_before_pull = get_latest_commit_hash()
     system_uptime = get_system_uptime()
 
-    final_message = f"# :warning: Inactive Axon Port on PM2 ID: {pm2_id}\n" + \
+    final_message = f"# :stethoscope: Inactive Axon Port on PM2 ID: {pm2_id}\n" + \
                 "\n" + discord_mention_code + "\n" + \
                 f"**Host IP:** {host_ip}\n" + \
                 f"**Commit Hash:** {commit_before_pull}\n" + \
