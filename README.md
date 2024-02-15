@@ -45,7 +45,7 @@ oldest_debug_axon_minutes = 15 # Time in minutes before considering a pm2 proces
 process_log_lines_lookback = 500 # Number of lines to look back for meaningful work
 
 # Comms
-discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
+discord_mention_code = '<@&0123456789876543210>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
 ```
 
 ## Env Var Config:
