@@ -19,7 +19,6 @@ pm2 update
 cd ~
 git clone https://github.com/sirouk/btt-miner-shield
 cd btt-miner-shield
-pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter python3
 ```
 
 ## Configuration:
@@ -38,9 +37,21 @@ upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
 discord_mention_code = '<@&1234567890987654321>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
 ```
 
+## Env Var Config:
+```bash
+cp ~/btt-miner-shield/.env.sample ~/btt-miner-shield/.env
+nano ~/btt-miner-shield/.env
+# edit for your discord webhook and desired IP whitelist (if any)
+```
+
+
+## Startup:
+```bash
+pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter python3 && pm2 save
+```
 
 ## Watch the output
 `pm2 logs btt-miner-shield-protection`
 
 ## Force update
-`cd ~/btt-miner-shield && git pull && pm2 restart btt-miner-shield-protection && pm2 logs btt-miner-shield-protection`
+`cd ~/btt-miner-shield && git pull && pm2 restart btt-miner-shield-protection && pm2 save && pm2 logs btt-miner-shield-protection`
