@@ -536,6 +536,8 @@ def main():
         sys.exit("\nOnly root can run this script\n")
 
     start_time = time.time()
+    
+    subprocess.run(["sudo", "ufw", "allow", "22"], check=True)
 
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
