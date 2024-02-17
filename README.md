@@ -41,8 +41,18 @@ sleep_between_checks = 5  # Time in seconds between connection monitoring
 
 # Uptime
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
-oldest_debug_axon_minutes = 15 # Time in minutes before considering a pm2 process to be dead and not doing any work
-process_log_lines_lookback = 500 # Number of lines to look back for meaningful work
+subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
+    -1: 10,
+    13: 25,
+    22: 20,
+    # Add more as needed
+}
+subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands for checking liveness
+    -1: "grep -e 'DEBUG' | grep -e 'axon' | grep -e '-->' | grep -v '| 404 |'",
+    24: "grep -e 'INFO' | grep -ie 'Succes' | grep -ie 'fully' | grep -ie 'transmitted'",
+    # Add more custom grep commands for other subnets as needed
+}
+process_log_lines_lookback = 1000 # Number of lines to look back for meaningful work
 
 # Comms
 discord_mention_code = '<@&0123456789876543210>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
