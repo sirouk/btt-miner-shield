@@ -42,9 +42,9 @@ sleep_between_checks = 5  # Time in seconds between connection monitoring
 # Uptime
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
 subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
-    -1: 10,
+    -1: 5,
     13: 25,
-    22: 20,
+    22: 15,
     # Add more as needed
 }
 subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands for checking liveness
