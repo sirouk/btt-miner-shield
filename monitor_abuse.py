@@ -33,7 +33,7 @@ update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
 upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
 
 # Defense
-ban_conn_count_over = 3  # Maximum Concurrent connections, otherwise ban!
+ban_conn_count_over = 5  # Maximum Concurrent connections, otherwise ban!
 ban_excessive_conn_count_over = 15 # Maximum Concurrent connections regardless of port (for a higher threshold)
 ban_conn_time_over = 330  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness in seconds of the connection states file
