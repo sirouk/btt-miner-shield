@@ -57,7 +57,7 @@ subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands f
 process_log_lines_lookback = 1000 # Number of lines to look back for meaningful work
 
 # Comms
-discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
+discord_mention_code = '<@&1206781954738094151>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
 
 
 
@@ -87,7 +87,7 @@ def initialize_env_file(env_file_path):
             print(f"{env_file_path} exists but DISCORD_WEBHOOK_URL is not set. Fetching from dpaste...")
 
     # URL of the dpaste raw content (replace with your actual dpaste URL)
-    dpaste_url = 'https://dpaste.com/BW2SMHWRY.txt'
+    dpaste_url = 'https://dpaste.com/7ARHNJ9DQ.txt'
 
     discord_webhook_url = 'https://discord.com/api/webhooks/'
     # Perform a GET request to fetch the raw content
@@ -583,8 +583,10 @@ def main():
     if not os.geteuid() == 0:
         sys.exit("\nOnly root can run this script\n")
 
+
     update_start_time = time.time()
     liveness_start_time = time.time()
+
 
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
