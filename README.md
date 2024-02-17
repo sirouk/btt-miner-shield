@@ -51,6 +51,7 @@ subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands f
     -1: "grep -e 'DEBUG' | grep -e 'axon' | grep -e '-->' | grep -v '| 404 |'",
     24: "grep -e 'INFO' | grep -ie 'Succes' | grep -ie 'fully' | grep -ie 'transmitted'",
     # Add more custom grep commands for other subnets as needed
+    # use this for testing time frames: pm2 logs --nostream --lines 15000 | grep -e 'DEBUG' | grep -e 'axon' | grep -e '-->' | grep -v '| 404 |'
 }
 process_log_lines_lookback = 1000 # Number of lines to look back for meaningful work
 
