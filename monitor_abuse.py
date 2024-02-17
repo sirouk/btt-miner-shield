@@ -40,6 +40,7 @@ states_file_timeout = 30 # The required freshness in seconds of the connection s
 sleep_between_checks = 5  # Time in seconds between connection monitoring
 
 # Uptime
+liveness_interval = 100 # Time in seconds to check for liveness (100 sec = 1min 40sec)
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
 subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
     -1: 5,
@@ -577,7 +578,8 @@ def main():
     if not os.geteuid() == 0:
         sys.exit("\nOnly root can run this script\n")
 
-    start_time = time.time()
+    update_start_time = time.time()
+    liveness_start_time = time.time()
 
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
@@ -598,18 +600,22 @@ def main():
     if not webhook_url or webhook_url == 'your_webhook_url_here':
         print("Webhook URL is not set in .env file. Exiting.")
         exit(1)
+        
 
     # Check in with admins
     report_for_duty(webhook_url)
 
-    # Start connection monitor and check axons
+    # Start connection monitor and check axons for liveness
     start_connection_duration_monitor()
     check_processes_axon_activity(webhook_url)
+    
 
     # Commands for system setup commented out for brevity
     while True:
         try:
 
+            
+            # Abuse
             axon_ports = get_axon_ports()
             connections = get_established_connections()
             handle_excessive_connections(connections, axon_ports, whitelist_ips)
@@ -618,7 +624,25 @@ def main():
                 report_banned_ips(webhook_url)
                 print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
 
-            if auto_update_enabled and time.time() - start_time >= update_interval:
+            
+            # Liveness
+            if time.time() - liveness_start_time >= liveness_interval:
+                
+                # Trigger the reset of the connection monitor
+                # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
+                start_connection_duration_monitor()
+
+                # Uptime liveness check
+                check_processes_axon_activity(webhook_url)
+
+                subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
+                subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+                
+                liveness_start_time = time.time()
+
+
+            #Updates
+            if auto_update_enabled and time.time() - update_start_time >= update_interval:
                 os.chdir(os.path.dirname(__file__))
                 commit_before_pull = get_latest_commit_hash()
                 subprocess.run(["git", "pull"], check=True)
@@ -629,18 +653,8 @@ def main():
                     break
                 else:
                     print("No updates found, continuing...")
-                    start_time = time.time()
+                    update_start_time = time.time()
 
-
-                subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
-                subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
-
-
-                # Trigger the reset of the connection monitor
-                # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
-                start_connection_duration_monitor()
-
-                check_processes_axon_activity(webhook_url)
 
         except Exception as e:
             print(f"Error occurred: {e}")
