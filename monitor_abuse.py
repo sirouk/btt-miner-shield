@@ -186,6 +186,10 @@ def calculate_uptime_minutes(uptime_str):
     parts = re.findall(r'(\d+)([wdhms])', uptime_str)
 
     for value, unit in parts:
+        
+        # Convert unit to lowercase to ensure compatibility with the dictionary keys
+        unit = unit.lower()
+        
         # Convert each part to minutes and add to the total
         total_minutes += int(value) * time_multipliers.get(unit, 0)
 
