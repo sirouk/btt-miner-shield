@@ -44,7 +44,7 @@ liveness_interval = 100 # Time in seconds to check for liveness (100 sec = 1min 
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
 subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
     -1: 5,
-    13: 25,
+    13: 30,
     22: 15,
     # Add more as needed
 }
