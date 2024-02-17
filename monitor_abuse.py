@@ -284,12 +284,12 @@ def check_processes_axon_activity(webhook_url):
                     print(restart_results)
 
                 # Report
-                message = f"PM2 ***{name}*** (ID: {pm2_id}, PID: {pid}) has a DEBUG log older than {oldest_debug_axon_minutes} minutes. Latest DEBUG machine timestamp: ***{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')}***, Process Uptime: {uptime_minutes} minutes. "
+                message = f"PM2 ***{name}*** (ID: {pm2_id}, PID: {pid}) has a previous liveness timestamp older than {oldest_debug_axon_minutes} minutes. Latest liveness timestamp: ***{latest_timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')}***, Process Uptime: {uptime_minutes} minutes. "
                 report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results)
             else:
-                print(f"PM2 ID {pm2_id} (PID {pid})'s latest DEBUG timestamp is within {oldest_debug_axon_minutes} minutes.")
+                print(f"PM2 ID {pm2_id} (PID {pid})'s latest liveness timestamp is within {oldest_debug_axon_minutes} minutes.")
         else:
-            print(f"No DEBUG timestamp found in the latest logs for PM2 ID {pm2_id}.")
+            print(f"No liveness timestamp found in the latest logs for PM2 ID {pm2_id}.")
 
 
 def get_system_uptime():
