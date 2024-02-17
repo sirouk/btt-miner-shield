@@ -41,8 +41,18 @@ sleep_between_checks = 5  # Time in seconds between connection monitoring
 
 # Uptime
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
-oldest_debug_axon_minutes = 20 # Time in minutes before considering a pm2 process to be dead and not doing any work
-process_log_lines_lookback = 500 # Number of lines to look back for meaningful work
+subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
+    -1: 10,
+    13: 25,
+    22: 20,
+    # Add more as needed
+}
+subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands for checking liveness
+    -1: "grep -e 'DEBUG' | grep -e 'axon' | grep -e '-->' | grep -v '| 404 |'",
+    24: "grep -e 'INFO' | grep -ie 'Succes' | grep -ie 'fully' | grep -ie 'transmitted'",
+    # Add more custom grep commands for other subnets as needed
+}
+process_log_lines_lookback = 1000 # Number of lines to look back for meaningful work
 
 # Comms
 discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
@@ -112,6 +122,25 @@ def get_pm2_list():
         return result.stdout.decode('utf-8')
     except Exception as e:
         return str(e)
+
+
+def get_netuid_from_pid(pid):
+    # Ensure the PID is a string for the subprocess call
+    pid_str = str(pid)
+    # Get the full command path using the PID
+    ps_cmd = ['ps', '-p', pid_str, '-o', 'args=']
+    ps_result = subprocess.run(ps_cmd, capture_output=True, text=True)
+    command_path = ps_result.stdout.strip()
+
+    # Extract the --netuid value from the command path
+    netuid_match = re.search(r'--netuid\s+(\d+)', command_path)
+    if netuid_match:
+        netuid = netuid_match.group(1)
+        print(f"NetUID for PID: {pid}: {netuid}")
+        return int(netuid)
+    else:
+        print(f"No NetUID found for PID: {pid}")
+        return -1
 
 
 def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results):
@@ -186,6 +215,16 @@ def get_pm2_process_uptime():
     return uptime_dict
 
 
+def construct_pm2_logs_command(pm2_id, process_log_lines_lookback, subnet_id, subnet_liveness_check_cmd):
+    # Select the grep command based on subnet_id
+    grep_cmd = subnet_liveness_check_cmd.get(subnet_id, subnet_liveness_check_cmd[-1])
+
+    # Construct the full pm2 logs command by combining the parts
+    full_cmd = f"pm2 logs {pm2_id} --nostream --lines {process_log_lines_lookback} | {grep_cmd}"
+
+    return full_cmd
+
+
 def check_processes_axon_activity(webhook_url):
     pm2_uptime = get_pm2_process_uptime()
     print(pm2_uptime)
@@ -195,16 +234,19 @@ def check_processes_axon_activity(webhook_url):
         name = details['name']
         pid = details['pid']
         uptime_minutes = details['uptime_minutes']
+        subnet_index = get_netuid_from_pid(pid)
 
-        print(f"Checking PM2 '{name}' (ID: {pm2_id}, PID: {pid}) Uptime: {uptime_minutes}...")
+        print(f"Checking PM2 '{name}' (ID: {pm2_id}, PID: {pid}) SN: {subnet_index} Uptime: {uptime_minutes}...")
+        oldest_debug_axon_minutes = subnet_oldest_debug_minutes.get(subnet_index, subnet_oldest_debug_minutes[-1])
 
         if uptime_minutes < oldest_debug_axon_minutes:
-            print(f"Skipping PM2 '{name}' (ID: {pm2_id}, PID: {pid}) due to uptime {uptime_minutes} minutes less than {oldest_debug_axon_minutes} minutes.")
+            print(f"Skipping PM2 '{name}' (ID: {pm2_id}, PID: {pid}) SN: {subnet_index} due to uptime {uptime_minutes} minutes less than {oldest_debug_axon_minutes} minutes.")
             continue
 
         latest_timestamp = None
-        # check for last meaningful axon DEBUG that is not a 404 error
-        cmd_logs = f"pm2 logs {pm2_id} --nostream --lines {process_log_lines_lookback} | grep -e 'DEBUG' | grep -e 'axon' | grep -e '-->' | grep -v '| 404 |'"
+
+        # Construct the full command
+        cmd_logs = construct_pm2_logs_command(pm2_id, process_log_lines_lookback, subnet_index, subnet_liveness_check_cmd)        
         logs_result = subprocess.run(cmd_logs, capture_output=True, text=True, shell=True)
 
         # Check for axon timestamp
