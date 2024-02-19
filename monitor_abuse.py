@@ -46,7 +46,7 @@ subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug
     -1: 10,
     13: 45,
     18: 5,
-    22: 12,
+    22: 15,
     # Add more as needed
 }
 subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands for checking liveness
