@@ -51,6 +51,7 @@ subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug
 }
 subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands for checking liveness
     -1: "grep -e 'DEBUG' | grep -e 'axon' | grep -e '-->' | grep -v '| 404 |'",
+    18: "grep -e 'INFO' | grep -ie 'Streamed tokens'",
     24: "grep -e 'INFO' | grep -ie 'Succes' | grep -ie 'fully' | grep -ie 'transmitted'",
     # Add more custom grep commands for other subnets as needed
 }
