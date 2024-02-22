@@ -45,7 +45,7 @@ auto_restart_process = True # Whether you want the script to restart the pm2 pro
 subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
     -1: 10,
     13: 5,
-    17: 5,
+    17: 10,
     18: 5,
     22: 20,
     27: 10,
