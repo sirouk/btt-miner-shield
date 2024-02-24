@@ -60,7 +60,7 @@ subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands f
     27: "grep -e 'SUCCESS' | grep -ie 'Challenge' | grep -ie 'seconds'",
     # Add more custom grep commands for other subnets as needed
 }
-process_log_lines_lookback = 1000 # Number of lines to look back for meaningful work
+process_log_lines_lookback = 5000 # Number of lines to look back for meaningful work
 
 # Comms
 discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
