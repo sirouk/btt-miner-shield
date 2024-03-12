@@ -50,6 +50,7 @@ subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug
     19: 10,
     22: 30,
     27: 10,
+    31: 10,
     # Add more as needed
 }
 subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands for checking liveness
@@ -60,7 +61,10 @@ subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands f
     19: "grep -e 'DEBUG' | grep -ie '-->' | grep -ie 'AvailableOperations' | grep -ie 'Success'",
     22: "grep -e 'INFO' | grep -ie 'answered to be active'",
     27: "grep -e 'SUCCESS' | grep -ie 'Challenge' | grep -ie 'seconds'",
+    31: "grep -e 'INFO' | grep -ie 'resync_metagraph'",
     # Add more custom grep commands for other subnets as needed
+    # each of these liveness check commands follow:
+    # pm2 logs --nostream --lines 15000 | 
 }
 process_log_lines_lookback = 5000 # Number of lines to look back for meaningful work
 
