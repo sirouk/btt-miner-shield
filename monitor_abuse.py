@@ -49,7 +49,7 @@ subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug
     18: 5,
     19: 10,
     22: 30,
-    27: 10,
+    27: 15,
     31: 10,
     # Add more as needed
 }
