@@ -116,16 +116,15 @@ def initialize_env_file(env_file_path):
     print(f"Updated {env_file_path} with the webhook URL.")
 
 
-def get_host_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def get_host_ip(api_token=None):
+    headers = {'Authorization': f'Bearer {api_token}'} if api_token else {}
     try:
-        # doesn't even have to be reachable
-        s.connect(('10.255.255.255', 1))
-        IP = s.getsockname()[0]
-    except Exception:
+        response = requests.get('https://ipinfo.io', headers=headers)
+        ip_info = response.json()
+        IP = ip_info['ip']
+    except Exception as e:
+        print(f"Error getting IP information: {e}")
         IP = '127.0.0.1'
-    finally:
-        s.close()
     return IP
 
 
