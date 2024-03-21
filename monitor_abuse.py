@@ -156,6 +156,24 @@ def get_netuid_from_pid(pid):
         return -1
 
 
+def get_latest_axon_timestamp(logs):
+    """
+    Extracts the latest timestamp from axon debug logs.
+    
+    :param logs: String containing the logs from subprocess output
+    :return: The latest timestamp found in the logs or None if no timestamp is found
+    """
+    latest_timestamp = None
+    debug_lines = re.findall(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})', logs)
+
+    for timestamp_str in debug_lines:
+        timestamp = datetime.datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
+        if latest_timestamp is None or timestamp > latest_timestamp:
+            latest_timestamp = timestamp
+
+    return latest_timestamp
+
+
 def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results):
     host_ip = get_host_ip()
     os.chdir(os.path.dirname(__file__))
@@ -266,21 +284,29 @@ def check_processes_axon_activity(webhook_url):
         cmd_logs = construct_pm2_logs_command(pm2_id, process_log_lines_lookback, subnet_index, subnet_liveness_check_cmd)        
         logs_result = subprocess.run(cmd_logs, capture_output=True, text=True, shell=True)
 
-        # Check for axon timestamp
-        debug_lines = re.findall(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})', logs_result.stdout)
-
-        for timestamp_str in debug_lines:
-            timestamp = datetime.datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
-            if latest_timestamp is None or timestamp > latest_timestamp:
-                latest_timestamp = timestamp
+        # Replacing the original timestamp checking code with a call to get_latest_axon_timestamp
+        latest_timestamp = get_latest_axon_timestamp(logs_result.stdout)
 
         if latest_timestamp:
+            
             # Calculate the time difference between now and the latest timestamp
             time_diff = datetime.datetime.now() - latest_timestamp
             time_diff_minutes = time_diff.total_seconds() / 60
 
             if time_diff_minutes > oldest_debug_axon_minutes:
 
+                # Check for deregistration error simply restart if the process is hung and the error timestamp is newer than the last liveliness timestamp
+                error_cmd = f"pm2 logs {pm2_id} --nostream --lines {process_log_lines_lookback} | grep -ie 'ERROR' | grep -ie 'Wallet' | grep -ie 'not registered'"
+                error_result = subprocess.run(error_cmd, capture_output=True, text=True, shell=True)
+                error_latest_timestamp = get_latest_axon_timestamp(error_result.stdout)
+                
+                if error_latest_timestamp and error_latest_timestamp > latest_timestamp:
+                    # Error is newer than the latest axon activity, so just restart the process without notifying
+                    subprocess.run(["pm2", "restart", str(pm2_id)], check=True)
+                    print(f"Restarted PM2 process {pm2_id} due to recent error without notifying.")
+                    continue
+
+                
                 restart_results = f"**PM2 Processes (BEFORE):**\n\n{get_pm2_list()}\n"
 
                 if auto_restart_process:
