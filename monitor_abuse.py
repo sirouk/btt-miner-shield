@@ -624,7 +624,7 @@ def main():
     liveness_start_time = time.time()
 
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
-    subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+    #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
     #subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
 
@@ -680,7 +680,7 @@ def main():
                 check_processes_axon_activity(webhook_url)
 
                 subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
-                subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+                #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
                 
                 liveness_start_time = time.time()
 
