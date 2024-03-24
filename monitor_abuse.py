@@ -174,6 +174,12 @@ def get_latest_axon_timestamp(logs):
     return latest_timestamp
 
 
+def stop_and_restart_pm2(pm2_id)
+    subprocess.run(["pm2", "stop", str(pm2_id)], check=True)
+    time.sleep(10)
+    subprocess.run(["pm2", "start", str(pm2_id)], check=True)
+
+
 def report_inactive_axon_to_discord(webhook_url, pm2_id, message, restart_results):
     host_ip = get_host_ip()
     os.chdir(os.path.dirname(__file__))
@@ -302,7 +308,7 @@ def check_processes_axon_activity(webhook_url):
                 
                 if error_latest_timestamp and error_latest_timestamp > latest_timestamp:
                     # Error is newer than the latest axon activity, so just restart the process without notifying
-                    subprocess.run(["pm2", "restart", str(pm2_id)], check=True)
+                    stop_and_restart_pm2(pm2_id)
                     print(f"Restarted PM2 process {pm2_id} due to recent error without notifying.")
                     continue
 
@@ -311,7 +317,7 @@ def check_processes_axon_activity(webhook_url):
 
                 if auto_restart_process:
                     # Restart the PM2 process by its ID
-                    restart_command = ["pm2", "restart", str(pm2_id)]
+                    stop_and_restart_pm2(pm2_id)
                     try:
                         subprocess.run(restart_command, check=True)
                         restart_results += f"Successfully restarted PM2 process with ID: {pm2_id}"
