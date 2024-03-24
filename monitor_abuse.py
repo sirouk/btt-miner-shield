@@ -174,7 +174,7 @@ def get_latest_axon_timestamp(logs):
     return latest_timestamp
 
 
-def stop_and_restart_pm2(pm2_id)
+def stop_and_restart_pm2(pm2_id):
     subprocess.run(["pm2", "stop", str(pm2_id)], check=True)
     time.sleep(10)
     subprocess.run(["pm2", "start", str(pm2_id)], check=True)
