@@ -66,7 +66,7 @@ subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands f
     # each of these liveness check commands follow:
     # pm2 logs --nostream --lines 15000 | 
 }
-process_log_lines_lookback = 5000 # Number of lines to look back for meaningful work
+process_log_lines_lookback = 3000 # Number of lines to look back for meaningful work
 
 # Comms
 discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
