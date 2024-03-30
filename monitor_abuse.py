@@ -316,10 +316,9 @@ def check_processes_axon_activity(webhook_url):
                 restart_results = f"**PM2 Processes (BEFORE):**\n\n{get_pm2_list()}\n"
 
                 if auto_restart_process:
-                    # Restart the PM2 process by its ID
-                    stop_and_restart_pm2(pm2_id)
                     try:
-                        subprocess.run(restart_command, check=True)
+                        # Restart the PM2 process by its ID
+                        stop_and_restart_pm2(pm2_id)
                         restart_results += f"Successfully restarted PM2 process with ID: {pm2_id}"
                     except subprocess.CalledProcessError as e:
                         restart_results += f"Failed to restart PM2 process with ID: {pm2_id}. Error: {e}"
