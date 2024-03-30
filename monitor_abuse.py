@@ -631,7 +631,7 @@ def main():
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
-    subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
+    #subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
 
     # Bittensor upgrades (runs twice to deal with pip's dependency resolver)
     if upgrade_btt:
