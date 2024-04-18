@@ -362,7 +362,7 @@ def check_processes_axon_activity(webhook_url):
                 error_time_diff = datetime.datetime.now() - error_latest_timestamp
                 latest_debug_error_age_minutes = error_time_diff.total_seconds() / 60
                 
-                print(f"uptime_minutes: {uptime}")
+                print(f"uptime_minutes: {uptime_minutes}")
                 print(f"latest_debug_error_age_minutes: {latest_debug_error_age_minutes}")
                 print(f"oldest_debug_axon_minutes: {oldest_debug_axon_minutes}")
                 
