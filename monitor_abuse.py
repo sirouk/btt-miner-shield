@@ -189,6 +189,13 @@ def get_latest_axon_timestamp(logs):
     return latest_timestamp
 
 
+def get_dereg_error_timestamp(pm2_id, process_log_lines_lookback):
+    # Check for deregistration error simply restart if the process is hung, there is no liveliness timestamp, and the error timestamp is aged past threshold
+    error_cmd = f"pm2 logs {pm2_id} --nostream --lines {process_log_lines_lookback} | grep -ie 'ERROR' | grep -ie 'Wallet' | grep -ie 'not registered'"
+    error_result = subprocess.run(error_cmd, capture_output=True, text=True, shell=True)
+    return get_latest_axon_timestamp(error_result.stdout)
+
+
 def stop_and_restart_pm2(pm2_id):
     subprocess.run(["pm2", "stop", str(pm2_id)], check=True)
     time.sleep(10)
@@ -316,10 +323,7 @@ def check_processes_axon_activity(webhook_url):
 
             if time_diff_minutes > oldest_debug_axon_minutes:
 
-                # Check for deregistration error simply restart if the process is hung and the error timestamp is newer than the last liveliness timestamp
-                error_cmd = f"pm2 logs {pm2_id} --nostream --lines {process_log_lines_lookback} | grep -ie 'ERROR' | grep -ie 'Wallet' | grep -ie 'not registered'"
-                error_result = subprocess.run(error_cmd, capture_output=True, text=True, shell=True)
-                error_latest_timestamp = get_latest_axon_timestamp(error_result.stdout)
+                error_latest_timestamp = get_dereg_error_timestamp(pm2_id, process_log_lines_lookback)
                 
                 if error_latest_timestamp and error_latest_timestamp > latest_timestamp:
                     # Error is newer than the latest axon activity, so just restart the process without notifying
@@ -347,6 +351,20 @@ def check_processes_axon_activity(webhook_url):
             else:
                 print(f"PM2 ID {pm2_id} (PID {pid})'s latest liveness timestamp is within {oldest_debug_axon_minutes} minutes.")
         else:
+            
+            error_latest_timestamp = get_dereg_error_timestamp(pm2_id, process_log_lines_lookback)
+
+            # The error should be within latest restart attempt and has been running long enough for a qualified restart
+            if error_latest_timestamp:
+                
+                error_time_diff = datetime.datetime.now() - error_latest_timestamp
+                latest_debug_error_age_minutes = error_time_diff.total_seconds() / 60
+                
+                if uptime_minutes > latest_debug_error_age_minutes and latest_debug_error_age_minutes > oldest_debug_axon_minutes:
+                    stop_and_restart_pm2(pm2_id)
+                    print(f"Restarted PM2 process {pm2_id} due to recent error without notifying.")
+                    continue
+                
             print(f"No liveness timestamp found in the latest logs for PM2 ID {pm2_id}.")
 
 
