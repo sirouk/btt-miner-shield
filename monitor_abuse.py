@@ -255,26 +255,30 @@ def calculate_uptime_minutes(uptime_str):
 
 
 def get_pm2_process_uptime():
-    cmd = ['pm2', 'ls', '-m']
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    # Adjust the regular expression to match the process name, pm2 id, pid, and uptime across multiple lines
-    process_details = re.findall(
-        r'\+\-\-\- ([\w\-]+)\n.*?namespace.*?\n.*?version.*?\n.*?pid\s*:\s*(\d+)\n.*?pm2 id\s*:\s*(\d+)\n.*?status.*?\n.*?mode.*?\n.*?restarted.*?\n.*?uptime\s*:\s*([\w\d]+)',
-        result.stdout,
-        re.DOTALL
-    )
-
-    # Convert details to a dictionary {pm2_id: {'name': name, 'pid': pid, 'uptime_minutes': uptime_minutes}}
-    uptime_dict = {
-        pm2_id: {
-            "name": name,
-            "pid": pid,
-            "uptime_minutes": calculate_uptime_minutes(uptime_str)
-        }
-        for name, pid, pm2_id, uptime_str in process_details
-    }
-
+    # Running the pm2 jlist command to get JSON formatted output
+    result = subprocess.run(['pm2', 'jlist'], capture_output=True, text=True)
+    processes = json.loads(result.stdout)
+    
+    # Dictionary to store process details
+    uptime_dict = {}
+    
+    # Current time in milliseconds since the epoch
+    current_time_ms = int(time.time() * 1000)
+    
+    for proc in processes:
+        if 'pm2_env' in proc:
+            pm_id = str(proc['pm2_env']['pm_id'])  # Ensure pm_id is a string if consistency is needed with regex parsing
+            # Calculating uptime in milliseconds and converting to minutes
+            if 'pm_uptime' in proc['pm2_env']:
+                uptime_ms = current_time_ms - proc['pm2_env']['pm_uptime']
+                uptime_minutes = (uptime_ms // 1000) // 60  # Convert milliseconds to minutes
+                # Adding process details to the dictionary
+                uptime_dict[pm_id] = {
+                    "name": proc['name'],
+                    "pid": proc['pid'],
+                    "uptime_minutes": uptime_minutes
+                }
+    
     return uptime_dict
 
 
