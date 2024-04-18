@@ -165,7 +165,7 @@ def get_netuid_from_pid(pid):
         return int(netuid)
     else:
         if args.netuid is not None:
-            print(f"No NetUID found for PID: {pid}, using default NetUID: {default_netuid}")
+            print(f"No NetUID found for PID: {pid}, using default NetUID: {args.netuid}")
             return args.netuid
         print(f"No NetUID found for PID: {pid}")
         return -1
