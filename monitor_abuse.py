@@ -370,7 +370,7 @@ def check_processes_axon_activity(webhook_url):
                 print(f"latest_debug_error_age_minutes: {latest_debug_error_age_minutes}")
                 print(f"oldest_debug_axon_minutes: {oldest_debug_axon_minutes}")
                 
-                if uptime_minutes > latest_debug_error_age_minutes and latest_debug_error_age_minutes > oldest_debug_axon_minutes:
+                if uptime_minutes >= latest_debug_error_age_minutes and latest_debug_error_age_minutes > oldest_debug_axon_minutes:
                     stop_and_restart_pm2(pm2_id)
                     print(f"Restarted PM2 process {pm2_id} due to recent error without notifying.")
                     continue
