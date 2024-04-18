@@ -72,6 +72,12 @@ nano ~/btt-miner-shield/.env
 pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter python3 && pm2 save
 ```
 
+## Optionally startup w/default netuid:
+Use this when the running process does not indicate netuid.
+```bash
+pm2 start monitor_abuse.py --name btt-miner-shield-protection --interpreter python3 -- --netuid 19 && pm2 save
+```
+
 ## Watch the output
 `pm2 logs btt-miner-shield-protection`
 
