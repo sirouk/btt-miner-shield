@@ -92,5 +92,5 @@ update_durations() {
 while true; do
     monitor_connections
     update_durations
-    sleep 0.1 # Keep it real
+    sleep 0.33 # Keep it real
 done
