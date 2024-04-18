@@ -356,6 +356,8 @@ def check_processes_axon_activity(webhook_url):
 
             # The error should be within latest restart attempt and has been running long enough for a qualified restart
             if error_latest_timestamp:
+                print(f"Checking PM2 ID: {pm2_id} for deregistration ERROR")
+                print(error_latest_timestamp)
                 
                 error_time_diff = datetime.datetime.now() - error_latest_timestamp
                 latest_debug_error_age_minutes = error_time_diff.total_seconds() / 60
