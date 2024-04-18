@@ -57,7 +57,7 @@ subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands f
     -1: "grep -e 'INFO' | grep -ie 'answered to be active'",
     13: "grep -e 'SUCCESS' | grep -ie 'Completed scrape' | grep -ie 'items'",
     17: "grep -e 'DEBUG' | grep -ie 'Streamed t'",
-    18: "grep -i 'INFO' | grep -Ei 'Streamed t|returning image response|answered to be active'",
+    18: "grep -e 'INFO' | grep -Ei 'Streamed t|returning image response|answered to be active'",
     19: "grep -e 'INFO' | grep -Ei 'image|chatting'",
     22: "grep -e 'INFO' | grep -ie 'answered to be active'",
     27: "grep -e 'SUCCESS' | grep -ie 'Challenge' | grep -ie 'seconds'",
