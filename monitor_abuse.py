@@ -1,4 +1,5 @@
 # for monitor
+import argparse
 import os
 import requests
 import subprocess
@@ -72,7 +73,6 @@ process_log_lines_lookback = 3000 # Number of lines to look back for meaningful 
 discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
 
 
-
 # Get the directory of the current script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -83,6 +83,18 @@ states_file = os.path.join(script_dir, 'connection_states.log')
 # Global list to keep track of banned IPs and reasons
 banned_ips = []  # Now will contain dicts with ip, port, and reason
 
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Monitor and manage PM2 processes for abuse and performance issues.')
+
+    # Args
+    parser.add_argument('--netuid', type=int, help='NetUID to use when no NetUID is found from the process list', default=None)
+    
+    parsed_args = parser.parse_args()
+    return parsed_args
+    
+# Parse CLI arguments
+args = parse_arguments()  
 
 
 def initialize_env_file(env_file_path):
@@ -152,6 +164,9 @@ def get_netuid_from_pid(pid):
         print(f"NetUID for PID: {pid}: {netuid}")
         return int(netuid)
     else:
+        if args.netuid is not None:
+            print(f"No NetUID found for PID: {pid}, using default NetUID: {default_netuid}")
+            return args.netuid
         print(f"No NetUID found for PID: {pid}")
         return -1
 
@@ -622,6 +637,7 @@ def handle_excessive_connections(connections, axon_ports, whitelist_ips):
 
 
 def main():
+    
     if not os.geteuid() == 0:
         sys.exit("\nOnly root can run this script\n")
 
