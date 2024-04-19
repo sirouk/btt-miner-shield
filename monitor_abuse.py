@@ -672,6 +672,13 @@ def main():
     update_start_time = time.time()
     liveness_start_time = time.time()
 
+    # PM2 logs management
+    subprocess.run(["pm2", "install", "pm2-logrotate"])
+    subprocess.run(["pm2", "set", "pm2-logrotate:max_size", "50M"])
+    subprocess.run(["pm2", "set", "pm2-logrotate:retain", "10"])
+    subprocess.run(["pm2", "set", "pm2-logrotate:compress", "true"])
+    subprocess.run(["pm2", "set", "pm2-logrotate:rotateInterval", "'00 */6 * * *'"])
+
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
