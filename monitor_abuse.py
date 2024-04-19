@@ -679,6 +679,9 @@ def main():
     subprocess.run(["pm2", "set", "pm2-logrotate:compress", "true"])
     subprocess.run(["pm2", "set", "pm2-logrotate:rotateInterval", "'00 */6 * * *'"])
 
+    # PM2 startup
+    subprocess.run(["pm2", "startup"])
+
     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
     #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
 
