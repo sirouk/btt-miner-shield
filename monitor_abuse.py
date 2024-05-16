@@ -45,6 +45,7 @@ liveness_interval = 100 # Time in seconds to check for liveness (100 sec = 1min 
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
 subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
     -1: 10,
+    2: 5,
     13: 15,
     17: 15,
     18: 5,
@@ -56,6 +57,7 @@ subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug
 }
 subnet_liveness_check_cmd = { # Dictionary mapping subnet IDs to grep commands for checking liveness
     -1: "grep -e 'INFO' | grep -ie 'answered to be active'",
+    2: "grep -e 'INFO' | grep -ie 'Proof completed'",
     13: "grep -e 'SUCCESS' | grep -ie 'Completed scrape' | grep -ie 'items'",
     17: "grep -e 'DEBUG' | grep -ie 'Streamed t'",
     18: "grep -e 'INFO' | grep -Ei 'Streamed t|returning image response|answered to be active'",
