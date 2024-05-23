@@ -38,7 +38,7 @@ ban_conn_count_over = 10  # Maximum Concurrent connections, otherwise ban!
 ban_excessive_conn_count_over = 30 # Maximum Concurrent connections regardless of port (for a higher threshold)
 ban_conn_time_over = 330  # Maximum oldest connection time in seconds
 states_file_timeout = 30 # The required freshness in seconds of the connection states file
-sleep_between_checks = 5  # Time in seconds between connection monitoring
+sleep_between_checks = 10  # Time in seconds between connection monitoring
 
 # Uptime
 liveness_interval = 100 # Time in seconds to check for liveness (100 sec = 1min 40sec)
