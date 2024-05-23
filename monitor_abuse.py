@@ -697,7 +697,7 @@ def main():
     # Load .env file, or initialize it if it doesn't exist
     initialize_env_file(env_file)
     load_dotenv(env_file)
-    ip_ban_enabled = os.getenv('ENABLE_IP_BANNING', True)
+    ip_ban_enabled = os.getenv('ENABLE_IP_BANNING', 'true')
     webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
     whitelist_ips = [ip.strip() for ip in os.getenv('WHITELIST_IPS', '').split(',') if ip.strip()]
     if whitelist_ips:
@@ -724,7 +724,7 @@ def main():
             # Abuse
             axon_ports = get_axon_ports()
             connections = get_established_connections()
-            if ip_ban_enabled:
+            if ip_ban_enabled == 'true':
                 handle_excessive_connections(connections, axon_ports, whitelist_ips)
             banned_per_round = len(banned_ips)
             if banned_per_round < 100:
