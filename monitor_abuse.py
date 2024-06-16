@@ -712,7 +712,8 @@ def main():
     report_for_duty(webhook_url)
 
     # Start connection monitor and check axons for liveness
-    start_connection_duration_monitor()
+    if ip_ban_enabled == 'true':
+        start_connection_duration_monitor()
     check_processes_axon_activity(webhook_url)
     
 
