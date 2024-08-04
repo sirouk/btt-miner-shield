@@ -308,8 +308,12 @@ def check_processes_axon_activity(webhook_url):
 
     # Corrected loop to properly unpack the dictionary
     for pm2_id, details in pm2_uptime.items():
-        name = details['name']
+        
         pid = details['pid']
+        if pid == current_pid:
+            continue
+        name = details['name']
+        
         uptime_minutes = details['uptime_minutes']
         subnet_index = get_netuid_from_pid(pid)
 
@@ -693,6 +697,8 @@ def main():
     
     if not os.geteuid() == 0:
         sys.exit("\nOnly root can run this script\n")
+
+    current_pid = os.getpid()
 
     # Load .env file, or initialize it if it doesn't exist
     initialize_env_file(env_file)
