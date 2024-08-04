@@ -42,7 +42,7 @@ states_file_timeout = 30 # The required freshness in seconds of the connection s
 sleep_between_checks = 10  # Time in seconds between connection monitoring
 
 # Uptime
-liveness_interval = 60 # Time in seconds to check for liveness
+liveness_interval = 120 # Time in seconds to check for liveness
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
 subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
     -1: 10,
@@ -784,7 +784,7 @@ def main():
             if ip_ban_enabled == 'true':
                 handle_excessive_connections(connections, axon_ports, whitelist_ips)
             banned_per_round = len(banned_ips)
-            if banned_per_round < 100:
+            if banned_per_round > 0 and banned_per_round < 100:
                 report_banned_ips(webhook_url)
                 print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
 
