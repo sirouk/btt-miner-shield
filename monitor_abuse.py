@@ -407,6 +407,7 @@ def get_system_uptime():
 def report_for_duty(webhook_url):
     # Message content
     host_ip = get_host_ip()
+    host_name = socket.gethostname() 
     pm2_list = get_pm2_list()
     os.chdir(os.path.dirname(__file__))
     commit_before_pull = get_latest_commit_hash()
@@ -418,12 +419,14 @@ def report_for_duty(webhook_url):
         dpaste_content = pm2_list
         dpaste_link = post_to_dpaste(dpaste_content)
         message = f"# :saluting_face: _reporting for duty!_\n" + \
+                  f"**Host Name:** {host_name}\n" + \
                   f"**Host IP:** {host_ip}\n" + \
                   f"**Commit Hash:** {commit_before_pull}\n" + \
                   f"**System Uptime:** {system_uptime}\n" + \
                   f"**PM2 Processes:**\n\n{dpaste_link}"
     else:
         message = f"# :saluting_face: _reporting for duty!_\n" + \
+                  f"**Host Name:** {host_name}\n" + \
                   f"**Host IP:** {host_ip}\n" + \
                   f"**Commit Hash:** {commit_before_pull}\n" + \
                   f"**System Uptime:** {system_uptime}\n" + \
