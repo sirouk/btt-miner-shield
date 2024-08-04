@@ -159,8 +159,9 @@ def get_netuid_from_pid(pid):
 
     # Override by args
     if args.netuid is not None:
+        netuid = args.netuid
         print(f"NetUID from args: {pid}: {netuid}")
-        return args.netuid
+        return netuid
     
     # Ensure the PID is a string for the subprocess call
     pid_str = str(pid)
