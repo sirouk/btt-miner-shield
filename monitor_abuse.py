@@ -31,7 +31,7 @@ subprocess.run(["sudo", "apt", "install", "-y", "net-tools"])
 # Updates
 auto_update_enabled = True
 update_interval = 300  # Time in seconds check for updates (300 sec = 5 min)
-upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
+
 
 # Defense
 ban_conn_count_over = 10  # Maximum Concurrent connections, otherwise ban!
@@ -41,7 +41,7 @@ states_file_timeout = 30 # The required freshness in seconds of the connection s
 sleep_between_checks = 10  # Time in seconds between connection monitoring
 
 # Uptime
-liveness_interval = 100 # Time in seconds to check for liveness (100 sec = 1min 40sec)
+liveness_interval = 60 # Time in seconds to check for liveness
 auto_restart_process = True # Whether you want the script to restart the pm2 process if it is found without meaningful work past a period of time
 subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug axon minutes
     -1: 10,
@@ -49,7 +49,7 @@ subnet_oldest_debug_minutes = { # Configuration for subnet-specific oldest debug
     13: 15,
     17: 15,
     18: 5,
-    19: 5,
+    19: 15,
     22: 20,
     27: 15,
     31: 10,
@@ -73,6 +73,10 @@ process_log_lines_lookback = 3000 # Number of lines to look back for meaningful 
 
 # Comms
 discord_mention_code = '<@&1203050411611652156>' # You can get this by putting a \ in front of a mention and sending a message in discord GUI client
+
+
+# Settings moved to .env
+#upgrade_btt = True # Set to true to upgrade machines to the latest Bittensor
 
 
 # Get the directory of the current script
@@ -333,6 +337,7 @@ def check_processes_axon_activity(webhook_url):
                 
                 if error_latest_timestamp and error_latest_timestamp > latest_timestamp:
                     # Error is newer than the latest axon activity, so just restart the process without notifying
+                    # NOTE: this could also be gated by a longer duration of timeout to reduce the overhead of restarting
                     stop_and_restart_pm2(pm2_id)
                     print(f"Restarted PM2 process {pm2_id} due to recent error without notifying.")
                     continue
@@ -671,6 +676,14 @@ def main():
     if not os.geteuid() == 0:
         sys.exit("\nOnly root can run this script\n")
 
+    # Load .env file, or initialize it if it doesn't exist
+    initialize_env_file(env_file)
+    load_dotenv(env_file)
+    ip_ban_enabled = os.getenv('ENABLE_IP_BANNING', 'true')
+    upgrade_btt = os.getenv('ENABLE_UPGRADING_BTT', 'true')
+    webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
+    env_whitelist_ips = os.getenv('WHITELIST_IPS', '')
+    
     update_start_time = time.time()
     liveness_start_time = time.time()
 
@@ -684,33 +697,31 @@ def main():
     # PM2 startup
     subprocess.run(["pm2", "startup"])
 
-    subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
-    #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
-
-    #subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
-
-    # Bittensor upgrades (runs twice to deal with pip's dependency resolver)
+    
+    # Bittensor upgrades (runs twice to deal with pip's dependency resolver)    
     if upgrade_btt:
         subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-    # Load .env file, or initialize it if it doesn't exist
-    initialize_env_file(env_file)
-    load_dotenv(env_file)
-    ip_ban_enabled = os.getenv('ENABLE_IP_BANNING', 'true')
-    webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
-    whitelist_ips = [ip.strip() for ip in os.getenv('WHITELIST_IPS', '').split(',') if ip.strip()]
+    if ip_ban_enabled:
+        subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
+        #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+        #subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
+
+
+    whitelist_ips = [ip.strip() for ip in env_whitelist_ips.split(',') if ip.strip()]
     if whitelist_ips:
         print(f"[INFO] Whitelisted IP(s): {whitelist_ips}")
 
+    
     if not webhook_url or webhook_url == 'your_webhook_url_here':
         print("Webhook URL is not set in .env file. Exiting.")
         exit(1)
-        
 
     # Check in with admins
     report_for_duty(webhook_url)
 
+    
     # Start connection monitor and check axons for liveness
     if ip_ban_enabled == 'true':
         start_connection_duration_monitor()
@@ -720,7 +731,6 @@ def main():
     # Commands for system setup commented out for brevity
     while True:
         try:
-
             
             # Abuse
             axon_ports = get_axon_ports()
@@ -743,8 +753,9 @@ def main():
                 # Uptime liveness check
                 check_processes_axon_activity(webhook_url)
 
-                subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
-                #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+                if ip_ban_enabled:
+                    subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
+                    #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
                 
                 liveness_start_time = time.time()
 
