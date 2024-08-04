@@ -1,6 +1,7 @@
 # for monitor
 import argparse
 import os
+current_pid = os.getpid()
 import requests
 import subprocess
 subprocess.run(["python3", "-m", "pip", "install", "netifaces"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
