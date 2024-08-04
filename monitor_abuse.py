@@ -720,8 +720,8 @@ def main():
     # Load .env file, or initialize it if it doesn't exist
     initialize_env_file(env_file)
     load_dotenv(env_file)
-    ip_ban_enabled = os.getenv('ENABLE_IP_BANNING', 'true')
-    upgrade_btt = os.getenv('ENABLE_UPGRADING_BTT', 'true')
+    ip_ban_enabled = os.getenv('ENABLE_IP_BANNING', 'true') == 'true'
+    upgrade_btt = os.getenv('ENABLE_UPGRADING_BTT', 'true') == 'true'
     webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
     env_whitelist_ips = os.getenv('WHITELIST_IPS', '')
 
@@ -769,7 +769,7 @@ def main():
 
     
     # Start connection monitor and check axons for liveness
-    if ip_ban_enabled == 'true':
+    if ip_ban_enabled:
         start_connection_duration_monitor()
     check_processes_axon_activity(webhook_url)
     
@@ -779,7 +779,7 @@ def main():
         try:
             
             # Abuse
-            if ip_ban_enabled == 'true':
+            if ip_ban_enabled:
                 
                 axon_ports = get_axon_ports()
                 connections = get_established_connections()
@@ -795,13 +795,13 @@ def main():
                 
                 # Trigger the reset of the connection monitor
                 # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
-                if ip_ban_enabled == 'true':
+                if ip_ban_enabled:
                     start_connection_duration_monitor()
 
                 # Uptime liveness check
                 check_processes_axon_activity(webhook_url)
 
-                if ip_ban_enabled == 'true':
+                if ip_ban_enabled:
                     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
                     #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
                 
