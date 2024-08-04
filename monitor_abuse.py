@@ -779,14 +779,15 @@ def main():
         try:
             
             # Abuse
-            axon_ports = get_axon_ports()
-            connections = get_established_connections()
             if ip_ban_enabled == 'true':
+                
+                axon_ports = get_axon_ports()
+                connections = get_established_connections()
                 handle_excessive_connections(connections, axon_ports, whitelist_ips)
-            banned_per_round = len(banned_ips)
-            if banned_per_round > 0 and banned_per_round < 100:
-                report_banned_ips(webhook_url)
-                print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
+                banned_per_round = len(banned_ips)
+                if banned_per_round > 0 and banned_per_round < 100:
+                    report_banned_ips(webhook_url)
+                    print(f"btt-miner-shield heartbeat (watching: {axon_ports})")
 
             
             # Liveness
