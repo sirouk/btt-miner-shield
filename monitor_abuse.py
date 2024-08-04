@@ -412,11 +412,22 @@ def report_for_duty(webhook_url):
     commit_before_pull = get_latest_commit_hash()
     system_uptime = get_system_uptime()
 
-    message = f"# :saluting_face: _reporting for duty!_\n" + \
-              f"**Host IP:** {host_ip}\n" + \
-              f"**Commit Hash:** {commit_before_pull}\n" + \
-              f"**System Uptime:** {system_uptime}\n" + \
-              f"**PM2 Processes:**\n\n{pm2_list}"
+    # Check if the list of banned IPs is longer than 10
+    if len(pm2_list) > 2000:
+        # Post the entire list to dpaste and get the link
+        dpaste_content = pm2_list
+        dpaste_link = post_to_dpaste(dpaste_content)
+        message = f"# :saluting_face: _reporting for duty!_\n" + \
+                  f"**Host IP:** {host_ip}\n" + \
+                  f"**Commit Hash:** {commit_before_pull}\n" + \
+                  f"**System Uptime:** {system_uptime}\n" + \
+                  f"**PM2 Processes:**\n\n{dpaste_link}"
+    else:
+        message = f"# :saluting_face: _reporting for duty!_\n" + \
+                  f"**Host IP:** {host_ip}\n" + \
+                  f"**Commit Hash:** {commit_before_pull}\n" + \
+                  f"**System Uptime:** {system_uptime}\n" + \
+                  f"**PM2 Processes:**\n\n{pm2_list}"
 
     data = {
         "content": message,
