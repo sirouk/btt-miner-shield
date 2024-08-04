@@ -314,6 +314,8 @@ def check_processes_axon_activity(webhook_url):
         if pid == current_pid:
             continue
         name = details['name']
+        if name == 'pm2-logrotate':
+            continue
         
         uptime_minutes = details['uptime_minutes']
         subnet_index = get_netuid_from_pid(pid)
