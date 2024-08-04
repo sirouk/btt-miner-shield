@@ -674,6 +674,20 @@ def handle_excessive_connections(connections, axon_ports, whitelist_ips):
             print(f"[INFO] IP: {ip}, Port: {port}, Count: {count}, Duration: {max_connection_duration}s")
 
 
+def check_for_updates():
+    os.chdir(os.path.dirname(__file__))
+    commit_before_pull = get_latest_commit_hash()
+    subprocess.run(["git", "pull"], check=True)
+    commit_after_pull = get_latest_commit_hash()
+
+    if commit_before_pull != commit_after_pull:
+        print("Updates pulled, exiting...")
+        exit(0)
+    else:
+        print("No updates found, continuing...")
+        return time.time()
+
+
 def main():
     
     if not os.geteuid() == 0:
@@ -686,8 +700,13 @@ def main():
     upgrade_btt = os.getenv('ENABLE_UPGRADING_BTT', 'true')
     webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
     env_whitelist_ips = os.getenv('WHITELIST_IPS', '')
-    
-    update_start_time = time.time()
+
+
+    # Check Updates
+    if auto_update_enabled:
+        update_start_time = check_for_updates()
+
+    # Initialize start time
     liveness_start_time = time.time()
 
     # PM2 logs management
@@ -764,21 +783,11 @@ def main():
                 liveness_start_time = time.time()
 
 
-            #Updates
+            # Updates
             if auto_update_enabled and time.time() - update_start_time >= update_interval:
-                os.chdir(os.path.dirname(__file__))
-                commit_before_pull = get_latest_commit_hash()
-                subprocess.run(["git", "pull"], check=True)
-                commit_after_pull = get_latest_commit_hash()
+                update_start_time = check_for_updates()
 
-                if commit_before_pull != commit_after_pull:
-                    print("Updates pulled, exiting...")
-                    break
-                else:
-                    print("No updates found, continuing...")
-                    update_start_time = time.time()
-
-
+        
         except Exception as e:
             print(f"Error occurred: {e}")
 
