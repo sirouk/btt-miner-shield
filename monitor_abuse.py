@@ -748,7 +748,8 @@ def main():
                 
                 # Trigger the reset of the connection monitor
                 # This captures a change to monitored ports, but we refactor to check first if it is in the state we want it
-                start_connection_duration_monitor()
+                if ip_ban_enabled == 'true':
+                    start_connection_duration_monitor()
 
                 # Uptime liveness check
                 check_processes_axon_activity(webhook_url)
