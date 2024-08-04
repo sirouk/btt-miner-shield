@@ -801,7 +801,7 @@ def main():
                 # Uptime liveness check
                 check_processes_axon_activity(webhook_url)
 
-                if ip_ban_enabled:
+                if ip_ban_enabled == 'true':
                     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
                     #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
                 
