@@ -749,12 +749,6 @@ def main():
         subprocess.run(["python3", "-m", "pip", "install", "--upgrade", "bittensor"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-    if ip_ban_enabled:
-        subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
-        #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
-        #subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
-
-
     whitelist_ips = [ip.strip() for ip in env_whitelist_ips.split(',') if ip.strip()]
     if whitelist_ips:
         print(f"[INFO] Whitelisted IP(s): {whitelist_ips}")
@@ -770,8 +764,12 @@ def main():
     
     # Start connection monitor and check axons for liveness
     if ip_ban_enabled:
+        subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
+        #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
+        #subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
         start_connection_duration_monitor()
     check_processes_axon_activity(webhook_url)
+    banned_per_round = 0
     
 
     # Commands for system setup commented out for brevity
