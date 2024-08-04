@@ -156,6 +156,12 @@ def get_pm2_list():
 
 
 def get_netuid_from_pid(pid):
+
+    # Override by args
+    if args.netuid is not None:
+        print(f"NetUID from args: {pid}: {netuid}")
+        return args.netuid
+    
     # Ensure the PID is a string for the subprocess call
     pid_str = str(pid)
     # Get the full command path using the PID
@@ -170,9 +176,6 @@ def get_netuid_from_pid(pid):
         print(f"NetUID for PID: {pid}: {netuid}")
         return int(netuid)
     else:
-        if args.netuid is not None:
-            print(f"No NetUID found for PID: {pid}, using default NetUID: {args.netuid}")
-            return args.netuid
         print(f"No NetUID found for PID: {pid}")
         return -1
 
