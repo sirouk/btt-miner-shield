@@ -305,7 +305,7 @@ def construct_pm2_logs_command(pm2_id, process_log_lines_lookback, subnet_id, su
     return full_cmd
 
 
-def check_processes_axon_activity(webhook_url):
+def check_processes_axon_activity(ignored_pm2_names, webhook_url):
     pm2_uptime = get_pm2_process_uptime()
     print(pm2_uptime)
 
@@ -775,7 +775,7 @@ def main():
         #subprocess.run(["sudo", "ufw", "--force", "reload"], check=True)
         #subprocess.run(["sudo", "ufw", "--force", "disable"], check=True)
         start_connection_duration_monitor()
-    check_processes_axon_activity(webhook_url)
+    check_processes_axon_activity(ignored_pm2_names, webhook_url)
     banned_per_round = 0
     
 
@@ -804,7 +804,7 @@ def main():
                     start_connection_duration_monitor()
 
                 # Uptime liveness check
-                check_processes_axon_activity(webhook_url)
+                check_processes_axon_activity(ignored_pm2_names, webhook_url)
 
                 if ip_ban_enabled:
                     subprocess.run(["sudo", "ufw", "--force", "enable"], check=True)
