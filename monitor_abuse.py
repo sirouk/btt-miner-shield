@@ -317,8 +317,10 @@ def check_processes_axon_activity(webhook_url):
         pid = details['pid']
         if pid == current_pid:
             continue
+            
+        ignored_jobs = [job.strip() for job in ignored_pm2_names.split(',')]
         name = details['name']
-        if name == 'pm2-logrotate':
+        if name in ignored_jobs:
             continue
         
         uptime_minutes = details['uptime_minutes']
@@ -728,6 +730,7 @@ def main():
     upgrade_btt = os.getenv('ENABLE_UPGRADING_BTT', 'true') == 'true'
     webhook_url = os.getenv('DISCORD_WEBHOOK_URL') # Fetch the webhook URL from the .env file
     env_whitelist_ips = os.getenv('WHITELIST_IPS', '')
+    ignored_pm2_names = os.getenv('IGNORED_PM2_JOBS', 'logrotate')
 
 
     # Check Updates
